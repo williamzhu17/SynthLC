@@ -46,7 +46,7 @@ def get_width():
 
     outf.write(post)
     outf.close()
-def postproc_gen(nm, pcr, ufsms, ufsms_w, ufsms_f, ufsms_cond):
+def postproc_gen(nm, pcr, ufsms, ufsms_w, ufsms_f, ufsms_cond, flush_map):
     total_cnt = 1
     for w, f in zip(ufsms_w, ufsms_f):
         if f is not None:
@@ -57,6 +57,9 @@ def postproc_gen(nm, pcr, ufsms, ufsms_w, ufsms_f, ufsms_cond):
     pl_def = {}
     pl_sig = {}
     pl_seqs = []
+
+    flush_sig = flush_map.get(nm, None)
+
     for idx in range(1, total_cnt):
         vals = []
         tmp_idx = idx
@@ -67,23 +70,37 @@ def postproc_gen(nm, pcr, ufsms, ufsms_w, ufsms_f, ufsms_cond):
             else:
                 vv = f
             vals = [vv] + vals
-        pl_name = "%s_s%d" % (nm, idx)
-        def_s = ("wire %s = \n" % pl_name)
-        def_s += ("\t(%s == pc0) && \n" % pcr)
+        
+        pl_base = f"{nm}_s{idx}"
+        flush_cases = [0, 1] if flush_sig else [None]
 
-        for ss, wid, vv in zip(ufsms, ufsms_w, vals):
-            def_s += ("\t(%s == %d'd%d) && \n" % (ss, wid, vv))
-        def_s += "\t 1'b1; \n"
-        pl_seqs.append(pl_name)
-        pl_def[pl_name] = def_s
-        composition_sig = [pcr]
-        for itm in ufsms:
-            if "==" in itm:
-                composition_sig += ufsms_cond[itm]
+        for fv in flush_cases:
+            if fv == 1:
+                pl_name = f"{pl_base}_f"
             else:
-                composition_sig.append(itm)
+                pl_name = pl_base
 
-        pl_sig[pl_name] = composition_sig
+            def_s = ("wire %s = \n" % pl_name)
+            def_s += ("\t(%s == pc0) && \n" % pcr)
+
+            for ss, wid, vv in zip(ufsms, ufsms_w, vals):
+                def_s += ("\t(%s == %d'd%d) && \n" % (ss, wid, vv))
+
+            if fv is not None:
+                def_s += f"\t({flush_sig} == 1'd{fv}) && \n"
+
+            def_s += "\t 1'b1; \n"
+            pl_seqs.append(pl_name)
+            pl_def[pl_name] = def_s
+
+            composition_sig = [pcr]
+            for itm in ufsms:
+                if "==" in itm:
+                    composition_sig += ufsms_cond[itm]
+                else:
+                    composition_sig.append(itm)
+
+            pl_sig[pl_name] = composition_sig
         #outf.write("\t(%s == pc0) && \n")
     return pl_def, pl_sig, pl_seqs
 def postproc(nm, pcr, ufsms, ufsms_w, ufsms_f, outf, flush_map):
@@ -246,6 +263,28 @@ def gen_header():
     except FileNotFoundError:
         print(ff + " not found")
         sys.exit(1)
+
+    flush_file = "%s/../annotations_flush.txt" % pwd
+    flush_signal_map = {}
+
+    try:
+        with open(flush_file, "r") as flush_mappings:
+            for line in flush_mappings:
+                # Skip empty lines
+                if not line.strip():
+                    continue
+
+                if line[0] == "#":
+                    continue
+
+                pl, flush_signal = line.strip().split(":", 1)
+                pl = pl.strip()
+                flush_signal = flush_signal.strip()
+
+                flush_signal_map[pl] = flush_signal
+    except FileNotFoundError:
+        print(flush_file + " not found, continuing without flush signals")
+
     pl_sv_f = open("reachable_duvpls.sv", "w")
     pl_sig_f = open("perfloc_signals.txt", "w")
     nm = None
@@ -256,7 +295,7 @@ def gen_header():
     ufsms_cond = {}
     for line in inf:
         if (line[0] == "#" or len(line[:-1]) == 0) and nm is not None:
-            pl_def_map, pl_sig_map, pl_seq = postproc_gen(nm, pcr, ufsms, ufsms_w, ufsms_f, ufsms_cond)
+            pl_def_map, pl_sig_map, pl_seq = postproc_gen(nm, pcr, ufsms, ufsms_w, ufsms_f, ufsms_cond, flush_signal_map)
             if "issue" in nm:
                 for itm in pl_seq:
                     if itm in reachable:
@@ -296,7 +335,7 @@ def gen_header():
                 ufsms_w.append(sig_width_map[ufsm_sig])
             ufsms.append(ufsm_sig)
 
-    pl_def_map, pl_sig_map, pl_seq = postproc_gen(nm, pcr, ufsms, ufsms_w, ufsms_f, ufsms_cond)
+    pl_def_map, pl_sig_map, pl_seq = postproc_gen(nm, pcr, ufsms, ufsms_w, ufsms_f, ufsms_cond, flush_signal_map)
     for itm in reachable:
         if itm in pl_def_map:
             pl_sv_f.write(pl_def_map[itm])

@@ -1,5 +1,5 @@
 serdiv_unit_divide : ex_stage_i.i_mult.flush_i
-id_stage : id_stage.flush_i
+id_stage : id_stage_i.flush_i
 issue : issue_stage_i.i_issue_read_operands.flush_i
 lsq_enq_0 : ex_stage_i.lsu_i.lsu_bypass_i.flush_i
 lsq_enq_1 : ex_stage_i.lsu_i.lsu_bypass_i.flush_i
