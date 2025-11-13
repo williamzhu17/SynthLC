@@ -1,0 +1,22 @@
+serdiv_unit_divide : ex_stage_i.i_mult.flush_i
+id_stage : id_stage.flush_i
+issue : issue_stage_i.i_issue_read_operands.flush_i
+lsq_enq_0 : ex_stage_i.lsu_i.lsu_bypass_i.flush_i
+lsq_enq_1 : ex_stage_i.lsu_i.lsu_bypass_i.flush_i
+scb_0 : issue_stage_i.i_scoreboard.flush_i
+scb_1 : issue_stage_i.i_scoreboard.flush_i
+scb_2 : issue_stage_i.i_scoreboard.flush_i
+scb_3 : issue_stage_i.i_scoreboard.flush_i
+stb_com_0 : ex_stage_i.lsu_i.i_store_unit.store_buffer_i.flush_i
+stb_com_1 : ex_stage_i.lsu_i.i_store_unit.store_buffer_i.flush_i
+stb_spec_0 : ex_stage_i.lsu_i.i_store_unit.store_buffer_i.flush_i
+stb_spec_1 : ex_stage_i.lsu_i.i_store_unit.store_buffer_i.flush_i
+load_unit : ex_stage_i.lsu_i.i_load_unit.flush_i
+store_unit : ex_stage_i.lsu_i.i_store_unit.flush_i
+# Not super sure about this one
+load_unit_buff : ex_stage_i.lsu_i.flush_i
+csr_buffer : ex_stage_i.csr_buffer_i.flush_i
+# Not super sure about this one
+mult : ex_stage_i.i_mult.flush_i
+load_unit_op : ex_stage_i.lsu_i.i_load_unit.flush_i
+mem_req : ex_stage_i.lsu_i.flush_i
