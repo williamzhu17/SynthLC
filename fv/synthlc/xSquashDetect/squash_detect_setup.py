@@ -87,7 +87,7 @@ def generate_top_file():
     topsim = "../../../src/topsim.sv"
     macro = "../../../src/macro.sv"
     header = "./reachable_pls_header.sv"
-    out = "./squash_detect_top.sv"
+    out = "./squash_detect.sv"
 
     # Read topsim once
     with open(topsim, "r") as f:

@@ -56,10 +56,26 @@ STEP 1 at $(pwd) $(date)
 
 DIR=xSquashDetect
 PYSCRPT=squash_detect_setup
+
+# TODO REMOVE
 if [ -d "${DIR}" ]; then 
-    echo "Directory exists ${DIR} and do only post-proc step"
-else 
-    cp -r ../${DIR} .
-    cd ${DIR}
-    python3 ${PYSCRPT}.py gen
+    rm -r ${DIR}
 fi
+
+cp -r ../${DIR} .
+cd ${DIR}
+python3 ${PYSCRPT}.py
+
+cd ../../../
+
+./RUN_JG.sh -j ./$SYNTHLCFOLD/$INAME/${DIR} -s ./$SYNTHLCFOLD/$INAME/${DIR}/squash_detect.sv -g 0
+
+# TODO REMOVE
+
+# if [ -d "${DIR}" ]; then 
+#     echo "Directory exists ${DIR} and do only post-proc step"
+# else 
+#     cp -r ../${DIR} .
+#     cd ${DIR}
+#     python3 ${PYSCRPT}.py
+# fi
