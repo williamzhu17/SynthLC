@@ -1,3 +1,5 @@
+import sys
+sys.path.append("../../src")
 from util import *
 
 def generate_spv_checks():
@@ -12,9 +14,11 @@ def prune_header_sv():
     Prune the header.sv file to only include PL annotations of reachable ones
     """
 
-    header_sv = "./header.sv"
-    reachable_pls = get_array("./xCoverAPerflocDiv/cover_individual.txt")
-    pruned_header_sv = "./xSquashDetect/reachable_pls_header.sv"
+    print("pruning header")
+
+    header_sv = "../header.sv"
+    reachable_pls = get_array("../xCoverAPerflocDiv/cover_individual.txt")
+    pruned_header_sv = "./reachable_pls_header.sv"
 
     # Convert to set for fast lookup
     reachable_pls_set = set(reachable_pls)
@@ -112,6 +116,8 @@ def generate_file_header():
         out_f.write(topsim_lines[-1])
 
 if __name__ == "__main__":
+    print(os.getcwd())
+
     # Generate SPV Checks
     generate_spv_checks()
 
