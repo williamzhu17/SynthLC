@@ -14,8 +14,6 @@ def prune_header_sv():
     Prune the header.sv file to only include PL annotations of reachable ones
     """
 
-    print("pruning header")
-
     header_sv = "../header.sv"
     reachable_pls = get_array("../xCoverAPerflocDiv/cover_individual.txt")
     pruned_header_sv = "./reachable_pls_header.sv"
@@ -80,18 +78,16 @@ def prune_header_sv():
     os.makedirs(os.path.dirname(pruned_header_sv), exist_ok=True)
     with open(pruned_header_sv, "w") as f:
         f.writelines(pruned_lines)
-    
 
-def generate_file_header():
+def generate_top_file():
     """
-    Generate the file header by concatenating the topsim, macro, and properties
-    TODO remove Check cover_individual_update_file_.sh for how to create
+    Generate the top file by concatenating the topsim, macro, and header file
     """
 
-    topsim = "./src/topsim.sv"
-    macro = "./src/macro.sv"
-    cover = "./synthlc/i_DIV_out/xCoverAPerflocDiv/out/cover_individual.sv"
-    out = "./synthlc/i_DIV_out/xCoverAPerflocDiv/cover_individual_top.sv"
+    topsim = "../../../src/topsim.sv"
+    macro = "../../../src/macro.sv"
+    header = "./reachable_pls_header.sv"
+    out = "./squash_detect_top.sv"
 
     # Read topsim once
     with open(topsim, "r") as f:
@@ -105,8 +101,8 @@ def generate_file_header():
         with open(macro, "r") as f:
             out_f.write(f.read())
 
-        # Write cover
-        with open(cover, "r") as f:
+        # Write header
+        with open(header, "r") as f:
             out_f.write(f.read())
 
         # Write empty line
@@ -116,16 +112,11 @@ def generate_file_header():
         out_f.write(topsim_lines[-1])
 
 if __name__ == "__main__":
-    print(os.getcwd())
-
     # Generate SPV Checks
     generate_spv_checks()
 
     # Prune header.sv
     prune_header_sv()
 
-    # Generate File Header
-    print("generating file header")
-
-    # Prepare file list
-    print("generating file list")
+    # Generate Top File
+    generate_top_file()
