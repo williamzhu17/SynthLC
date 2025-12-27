@@ -9,7 +9,9 @@ def prune_header_sv():
     Prune the header.sv file to only include PL annotations of reachable ones
     """
 
-    header_sv = "../header.sv"
+    # header_ia.sv assumes that all instructions will be committed, this is faulty and we need to change it
+    # Need to check for squash
+    header_sv = "../../../header_ia.sv"
     reachable_pls = get_array("../xCoverAPerflocDiv/cover_individual.txt")
     pruned_header_sv = "./reachable_pls_header.sv"
 
@@ -175,9 +177,16 @@ def generate_spv_tcl():
             # Concatenate all opcode portions into a single precondition
             from_precond = " && ".join(opcode_portions).replace("i0", instruction_signal)
 
-            # Also append onto the precondition that this instruction should not be the 
+            # Append onto precondition that this instruction should not be the 
             # same as the instruction we are detecting a squash
-            from_precond += f" && id_stage_i.fetch_entry_i.address != pc0"
+            from_precond += " && id_stage_i.fetch_entry_i.address != pc0"
+
+            # Append onto precondition that this instruction is valid
+            # TODO: check if this is necessary, I think it makes it run faster, but not sure
+            # header_ia.sv has this assumption
+            # from_precond += " && id_stage_i.fetch_entry_valid_i"
+
+            # TODO: check for when the instruction commits normally and exclude this case
 
             spv_check = generate_spv_check(
                 name=f"{instruction_name}_squasher",
