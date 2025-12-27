@@ -2,13 +2,6 @@ import sys
 sys.path.append("../../src")
 from util import *
 
-def generate_spv_checks():
-    """
-    Generate the SPV checks
-    """
-
-    print("generating SPV checks")
-
 def prune_header_sv():
     """
     Prune the header.sv file to only include PL annotations of reachable ones
@@ -107,12 +100,54 @@ def generate_spv_signals():
 
         out_f.write("\n")
 
-if __name__ == "__main__":
-    # Generate SPV Checks
-    generate_spv_checks()
+def generate_spv_check(name, from_signal, to_signal, from_precond=None, to_precond=None):
+    spv_check = f"check_spv -create -name {{{name}}} -from {{{from_signal}}} -to {{{to_signal}}}"
 
+    if from_precond:
+        spv_check += f" -from_precond {{{from_precond}}}"
+
+    if to_precond:
+        spv_check += f" -to_precond {{{to_precond}}}"
+
+    return spv_check
+
+def generate_spv_tcl():
+    """
+    Generate the SPV TCL file
+    """
+
+    template = "./squash_detect_template.tcl"
+    out = "./squash_detect.tcl"
+
+    with open(template, "r") as f:
+        template_lines = f.readlines()
+    
+    with open(out, "w") as out_f:
+        # Write the first line: check_spv -init
+        out_f.write(template_lines[0])
+
+        out_f.write("\n")
+
+        # Write SPV checks
+        # TODO: finish generating remaining ones
+        out_f.write(generate_spv_check(
+            name="instn_squash",
+            from_signal="fetch_entry_if_id.instruction[6:0]",
+            to_signal="left_perf_locs",
+            to_precond="left_perf_locs && $past(in_perf_locs)"
+        ))
+
+        out_f.write("\n")
+
+        # Write remaining template lines
+        out_f.write("".join(template_lines[1:]))
+
+if __name__ == "__main__":
     # Prune header.sv
     prune_header_sv()
 
     # Generate Top File
     generate_spv_signals()
+
+    # Generate SPV Checks
+    generate_spv_tcl()
