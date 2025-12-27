@@ -4,7 +4,7 @@ from util import *
 
 def generate_spv_checks():
     """
-    Generates the SPV checks
+    Generate the SPV checks
     """
 
     print("generating SPV checks")
@@ -79,37 +79,33 @@ def prune_header_sv():
     with open(pruned_header_sv, "w") as f:
         f.writelines(pruned_lines)
 
-def generate_top_file():
+def generate_spv_signals():
     """
-    Generate the top file by concatenating the topsim, macro, and header file
+    Generates the signals used for SPV
     """
 
-    topsim = "../../../src/topsim.sv"
-    macro = "../../../src/macro.sv"
     header = "./reachable_pls_header.sv"
     out = "./squash_detect.sv"
 
-    # Read topsim once
-    with open(topsim, "r") as f:
-        topsim_lines = f.readlines()
+    reachable_pls = get_array("../xCoverAPerflocDiv/cover_individual.txt")
 
     with open(out, "w") as out_f:
-        # Write entire topsim except the last line
-        out_f.writelines(topsim_lines[:-1])
-
-        # Write macro
-        with open(macro, "r") as f:
-            out_f.write(f.read())
-
         # Write header
         with open(header, "r") as f:
             out_f.write(f.read())
 
-        # Write empty line
         out_f.write("\n")
 
-        # Write last line of topsim
-        out_f.write(topsim_lines[-1])
+        # wire in_perf_locs = PL1 || PL2 || ...;
+        in_perf_locs_string = "wire in_perf_locs = " + " || ".join(reachable_pls) + ";\n"
+
+        # Write in_perf_locs wire
+        out_f.write(in_perf_locs_string)
+
+        # Write left_perf_locs wire
+        out_f.write("wire left_perf_locs = !in_perf_locs;")
+
+        out_f.write("\n")
 
 if __name__ == "__main__":
     # Generate SPV Checks
@@ -119,4 +115,4 @@ if __name__ == "__main__":
     prune_header_sv()
 
     # Generate Top File
-    generate_top_file()
+    generate_spv_signals()
