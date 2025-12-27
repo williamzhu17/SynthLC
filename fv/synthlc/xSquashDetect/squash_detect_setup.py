@@ -1,3 +1,5 @@
+import os
+import re
 import sys
 sys.path.append("../../src")
 from util import *
@@ -101,6 +103,11 @@ def generate_spv_signals():
         out_f.write("\n")
 
 def generate_spv_check(name, from_signal, to_signal, from_precond=None, to_precond=None):
+    """
+    Generates the SPV check for a given name, from_signal, to_signal, from_precond, to_precond
+    Returns the string of that SPV check
+    """
+
     spv_check = f"check_spv -create -name {{{name}}} -from {{{from_signal}}} -to {{{to_signal}}}"
 
     if from_precond:
@@ -111,12 +118,55 @@ def generate_spv_check(name, from_signal, to_signal, from_precond=None, to_preco
 
     return spv_check
 
+def obtain_opcodes():
+    """
+    Generates a dictionary of all of the opcodes from the opcodes_gen_all directory
+    Key will be the name instruction (found in file name) and value will be a list of all the opcode portions extracted from the file
+    """
+
+    directory = "../../opcodes_gen_all"
+
+    opcodes = {}
+
+    # Get all files in the directory
+    for filename in os.listdir(directory):
+        # TODO: may want to get rid of specific extensions
+        if filename.endswith('.sv') or filename.endswith('.v'):
+            # Extract instruction name from filename (remove extension)
+            instruction_name = os.path.splitext(filename)[0]
+            
+            # Read the file and extract opcode portions
+            filepath = os.path.join(directory, filename)
+            opcode_portions = []
+            
+            with open(filepath, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    # Skip empty lines and define directives
+                    if not line or line.startswith('`define'):
+                        continue
+                    
+                    # Extract the opcode portion from assume property statements
+                    # Pattern: i_INSTRUCTIONNAME_N: assume property (i0[bits] == value);
+                    # We want to extract: i0[bits] == value
+                    match = re.search(r'assume property\s*\((.*?)\);', line)
+                    if match:
+                        opcode_portion = match.group(1).strip()
+                        opcode_portions.append(opcode_portion)
+            
+            # Store in dictionary
+            opcodes[instruction_name] = opcode_portions
+    
+    return opcodes
+
 def generate_spv_tcl():
     """
     Generate the SPV TCL file
     """
 
     template = "./squash_detect_template.tcl"
+    opcodes = obtain_opcodes()
+    instruction_signal = "id_stage_i.instruction"
     out = "./squash_detect.tcl"
 
     with open(template, "r") as f:
@@ -129,15 +179,19 @@ def generate_spv_tcl():
         out_f.write("\n")
 
         # Write SPV checks
-        # TODO: finish generating remaining ones
-        out_f.write(generate_spv_check(
-            name="instn_squash",
-            from_signal="fetch_entry_if_id.instruction[6:0]",
-            to_signal="left_perf_locs",
-            to_precond="left_perf_locs && $past(in_perf_locs)"
-        ))
+        for instruction_name, opcode_portions in opcodes.items():
+            from_precond = " && ".join(opcode_portions).replace("i0", instruction_signal)
 
-        out_f.write("\n")
+            spv_check = generate_spv_check(
+                name=f"{instruction_name}_squasher",
+                from_signal=instruction_signal,
+                to_signal="left_perf_locs",
+                from_precond=from_precond,
+                to_precond="left_perf_locs && $past(in_perf_locs)"
+            )
+
+            out_f.write(spv_check)
+            out_f.write("\n")
 
         # Write remaining template lines
         out_f.write("".join(template_lines[1:]))
