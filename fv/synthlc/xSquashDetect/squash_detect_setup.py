@@ -172,7 +172,12 @@ def generate_spv_tcl():
     with open(out, "w") as out_f:
         # Write SPV checks
         for instruction_name, opcode_portions in opcodes.items():
+            # Concatenate all opcode portions into a single precondition
             from_precond = " && ".join(opcode_portions).replace("i0", instruction_signal)
+
+            # Also append onto the precondition that this instruction should not be the 
+            # same as the instruction we are detecting a squash
+            from_precond += f" && id_stage_i.fetch_entry_i.address != pc0"
 
             spv_check = generate_spv_check(
                 name=f"{instruction_name}_squasher",
