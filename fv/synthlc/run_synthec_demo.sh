@@ -68,7 +68,7 @@ python3 ${PYSCRPT}.py
 
 cd ../../../
 
-./RUN_JG.sh -j ./$SYNTHLCFOLD/$INAME/${DIR} -s ./$SYNTHLCFOLD/$INAME/${DIR}/squash_detect.sv -g 0
+./RUN_JG.sh -j ./$SYNTHLCFOLD/$INAME/${DIR} -s ./$SYNTHLCFOLD/$INAME/${DIR}/squash_detect.sv -t ./$SYNTHLCFOLD/$INAME/${DIR}/squash_detect.tcl --spv -g 1
 
 # TODO REMOVE
 

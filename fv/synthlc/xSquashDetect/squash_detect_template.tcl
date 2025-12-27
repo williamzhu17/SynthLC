@@ -1,5 +1,3 @@
-check_spv -init
-
 puts "=== Checking SPV consistency ==="
 check_spv -consistency
 

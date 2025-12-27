@@ -168,16 +168,8 @@ def generate_spv_tcl():
     opcodes = obtain_opcodes()
     instruction_signal = "id_stage_i.instruction"
     out = "./squash_detect.tcl"
-
-    with open(template, "r") as f:
-        template_lines = f.readlines()
     
     with open(out, "w") as out_f:
-        # Write the first line: check_spv -init
-        out_f.write(template_lines[0])
-
-        out_f.write("\n")
-
         # Write SPV checks
         for instruction_name, opcode_portions in opcodes.items():
             from_precond = " && ".join(opcode_portions).replace("i0", instruction_signal)
@@ -193,8 +185,14 @@ def generate_spv_tcl():
             out_f.write(spv_check)
             out_f.write("\n")
 
-        # Write remaining template lines
-        out_f.write("".join(template_lines[1:]))
+        out_f.write("\n")
+
+        # Read template content
+        with open(template, "r") as f:
+            template_content = f.read()
+
+        # Append template content
+        out_f.write(template_content)
 
 if __name__ == "__main__":
     # Prune header.sv

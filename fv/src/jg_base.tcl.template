@@ -7,10 +7,15 @@ set SRCDIR HDLDIR
 set FPV 1
 set REACH 0
 set CUSTOMTCL 0
+set SPVINIT 0
 ############
 exec UPDATEFILE
 # Analyze RTL files
 analyze -sv09 -f jg_hdl.f -y $SRCDIR +incdir+$SRCDIR
+
+if {$SPVINIT == 1} {
+    check_spv -init
+}
 
 if {$REACH == 1} {
     puts "test bboxing mfpt" 

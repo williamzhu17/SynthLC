@@ -28,6 +28,7 @@ TCL=./jg_base.tcl.test
 #TCL=./jg_base_nrst.tcl
 
 SYM="0"
+SPVINIT="0"
 POSITIONAL=()
 while [[ $# -gt 0 ]]
 do
@@ -64,6 +65,10 @@ case $key in
     CUSTOMTCL="$2"
     shift 
     shift
+    ;;
+    --spv)
+    SPVINIT="1"
+    shift # past argument
     ;;
     --help)
         echo "-j/--job <jobDir> -s/--sva <sva file path> -g/--gui <0/1(deafult) (--sym 1)>"
@@ -152,6 +157,10 @@ if [ "$CUSTOMTCL" != "" ]; then
     sed -i "s~set CUSTOMTCL 0~set CUSTOMTCL 1~" $TCLF
     sed -i "s~#CUSTOMTCL~source $CUSTOMTCL~" $TCLF
     sed -i "s~CSVNAME~${JOB}/${filename}~" $CUSTOMTCL
+fi
+
+if [ "$SPVINIT" -eq "1" ]; then
+    sed -i "s~set SPVINIT 0~set SPVINIT 1~" $TCLF
 fi
 
 echo "[RUN_JG] TCLF is $TCLF"
