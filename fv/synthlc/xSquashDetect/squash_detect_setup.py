@@ -100,22 +100,9 @@ def generate_spv_signals():
         out_f.write(in_perf_locs_string)
 
         # Write left_perf_locs wire
-        out_f.write("wire left_perf_locs = !in_perf_locs;")
+        out_f.write("wire left_perf_locs = !in_perf_locs;\n")
 
         out_f.write("\n")
-
-        # Write seen_instn_begin wire
-        # TODO refactor for cleaner code and also general clk and rst signals
-        seen_instn_begin_string = """logic seen_instn_begin;
-always @(posedge clk_i) begin
-    if (!rst_ni) begin
-        seen_instn_begin <= 1'b0;
-    end else if (instn_begin) begin
-        seen_instn_begin <= 1'b1;
-    end
-end"""
-
-        out_f.write(seen_instn_begin_string)
 
 def generate_spv_check(name, from_signal, to_signal, from_precond=None, to_precond=None, keep_driving_logic=False):
     """
@@ -205,14 +192,17 @@ def generate_spv_tcl():
             # Append onto precondition that the IUV has been seen
             from_precond += " && seen_instn_begin"
 
-            # TODO: check for when the instruction commits normally and exclude this case
+            to_precond = "left_perf_locs && $past(in_perf_locs)"
+
+            # Add check that instruction did not commit normally
+            to_precond += " && !seen_instn_committed && !instn_committed"
 
             spv_check = generate_spv_check(
                 name=f"{instruction_name}_squasher",
                 from_signal=instruction_signal,
                 to_signal="left_perf_locs",
                 from_precond=from_precond,
-                to_precond="left_perf_locs && $past(in_perf_locs)",
+                to_precond=to_precond,
                 keep_driving_logic=True
             )
 
