@@ -104,7 +104,20 @@ def generate_spv_signals():
 
         out_f.write("\n")
 
-def generate_spv_check(name, from_signal, to_signal, from_precond=None, to_precond=None):
+        # Write seen_instn_begin wire
+        # TODO refactor for cleaner code and also general clk and rst signals
+        seen_instn_begin_string = """logic seen_instn_begin;
+always @(posedge clk_i) begin
+    if (!rst_ni) begin
+        seen_instn_begin <= 1'b0;
+    end else if (instn_begin) begin
+        seen_instn_begin <= 1'b1;
+    end
+end"""
+
+        out_f.write(seen_instn_begin_string)
+
+def generate_spv_check(name, from_signal, to_signal, from_precond=None, to_precond=None, keep_driving_logic=False):
     """
     Generates the SPV check for a given name, from_signal, to_signal, from_precond, to_precond
     Returns the string of that SPV check
@@ -117,6 +130,9 @@ def generate_spv_check(name, from_signal, to_signal, from_precond=None, to_preco
 
     if to_precond:
         spv_check += f" -to_precond {{{to_precond}}}"
+
+    if keep_driving_logic:
+        spv_check += " -keep_driving_logic"
 
     return spv_check
 
@@ -186,6 +202,9 @@ def generate_spv_tcl():
             # header_ia.sv has this assumption
             # from_precond += " && id_stage_i.fetch_entry_valid_i"
 
+            # Append onto precondition that the IUV has been seen
+            from_precond += " && seen_instn_begin"
+
             # TODO: check for when the instruction commits normally and exclude this case
 
             spv_check = generate_spv_check(
@@ -193,7 +212,8 @@ def generate_spv_tcl():
                 from_signal=instruction_signal,
                 to_signal="left_perf_locs",
                 from_precond=from_precond,
-                to_precond="left_perf_locs && $past(in_perf_locs)"
+                to_precond="left_perf_locs && $past(in_perf_locs)",
+                keep_driving_logic=True
             )
 
             out_f.write(spv_check)
