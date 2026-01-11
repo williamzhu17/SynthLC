@@ -9,6 +9,7 @@ check_spv -list properties
 
 # Prove SPV properties
 puts "=== Proving SPV properties ==="
+set_spv_show_bound_progress_in_log true
 check_spv -prove -all
 
 # Report results

@@ -73,17 +73,6 @@ EVENTUAL_ISSUE: assume property (@(posedge clk_i) first |->
     s_eventually(instn_begin));
 EXE_IUV: assume property (@(posedge clk_i) instn_begin |-> fetch_ready_id_if);
 
-// If instruction has already begun
-reg seen_instn_begin;
-
-always @(posedge clk_i) begin
-    if (!rst_ni) begin
-        seen_instn_begin <= 1'b0;
-    end else if (instn_begin) begin
-        seen_instn_begin <= 1'b1;
-    end
-end
-
 // Instruction is being committed
 wire instn_committed = 
     (commit_stage_i.commit_instr_i[0].pc == pc0 && commit_stage_i.commit_ack_o[0]) || 

@@ -11,7 +11,7 @@ def prune_header_sv():
 
     # header_ia.sv assumes that all instructions will be committed, this is faulty and we need to change it
     # Need to check for squash
-    header_sv = "../../../header_ia.sv"
+    header_sv = "../header_ia.sv"
     reachable_pls = get_array("../xCoverAPerflocDiv/cover_individual.txt")
     pruned_header_sv = "./reachable_pls_header.sv"
 
@@ -184,14 +184,6 @@ def generate_spv_tcl():
             # same as the instruction we are detecting a squash
             from_precond += " && id_stage_i.fetch_entry_i.address != pc0"
 
-            # Append onto precondition that this instruction is valid
-            # TODO: check if this is necessary, I think it makes it run faster, but not sure
-            # header_ia.sv has this assumption
-            # from_precond += " && id_stage_i.fetch_entry_valid_i"
-
-            # Append onto precondition that the IUV has been seen
-            from_precond += " && seen_instn_begin"
-
             to_precond = "left_perf_locs && $past(in_perf_locs)"
 
             # Add check that instruction did not commit normally
@@ -203,7 +195,7 @@ def generate_spv_tcl():
                 to_signal="left_perf_locs",
                 from_precond=from_precond,
                 to_precond=to_precond,
-                keep_driving_logic=True
+                keep_driving_logic=False # TODO check if we need, this makes slower
             )
 
             out_f.write(spv_check)

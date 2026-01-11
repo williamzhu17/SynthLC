@@ -16,6 +16,10 @@ DESIGNDIR=$(realpath ..)
 #echo "[RUN_JG] Preparing hdl.f ........................................ "
 #sed "s~DESIGNDIR~${DESIGNDIR}~" hdl.f.template > hdl.f.test
 
+# TODO REMOVE
+shopt -s expand_aliases
+alias jg='/cad/cadence/jasper_2025.12/bin/jg'
+
 #FFILE=hdl.f
 FFILE=hdl.f.test
 CUSTOMTCL=

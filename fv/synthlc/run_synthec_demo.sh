@@ -37,6 +37,13 @@ echo "- Instruction file: $INSTN"
 cat $INSTN
 echo "==============================="
 
+##### per instruction #####
+
+HEADERFILE=$(realpath ../header_ia.sv)
+
+cp $HEADERFILE $INAME/header_ia.sv
+cat $INSTN >> $INAME/header_ia.sv
+
 if [ ! -d "$INAME" ]; then 
     echo "Directory does not exists $INAME"
     exit 0
