@@ -4,84 +4,13 @@ import sys
 sys.path.append("../../src")
 from util import *
 
-def prune_header_sv():
+def generate_header(i1_opcode):
     """
-    Prune the header.sv file to only include PL annotations of reachable ones
-    """
-
-    # header_ia.sv assumes that all instructions will be committed, this is faulty and we need to change it
-    # Need to check for squash
-    header_sv = "../header_ia.sv"
-    reachable_pls = get_array("../xCoverAPerflocDiv/cover_individual.txt")
-    pruned_header_sv = "./reachable_pls_header.sv"
-
-    # Convert to set for fast lookup
-    reachable_pls_set = set(reachable_pls)
-
-    with open(header_sv, "r") as f:
-        lines = f.readlines()
-
-    # Write the pruned header.sv
-    pruned_lines = []
-    i = 0
-    in_wire_section = False
-    
-    # Process lines: keep everything before wires, selectively keep wires, keep everything after
-    while i < len(lines):
-        line = lines[i]
-        
-        # Check if we're entering the wire definitions section
-        if "Performing location" in line:
-            in_wire_section = True
-            pruned_lines.append(line)
-            i += 1
-            continue
-        
-        # If we're in the wire section, process wire definitions
-        if in_wire_section and line.strip().startswith("wire "):
-            # Extract wire name (format: "wire <name> =")
-            wire_name = line.split()[1]  # Get the name after "wire"
-            # Check if this wire is in reachable_pls
-            if wire_name in reachable_pls_set:
-                # Include the entire wire definition (until we see 1'b1;)
-                wire_block = [line]
-                i += 1
-                while i < len(lines) and "1'b1;" not in lines[i]:
-                    wire_block.append(lines[i])
-                    i += 1
-                # Include the line with 1'b1;
-                if i < len(lines):
-                    wire_block.append(lines[i])
-                pruned_lines.extend(wire_block)
-            else:
-                # Skip this wire definition
-                i += 1
-                while i < len(lines) and "1'b1;" not in lines[i]:
-                    i += 1
-            i += 1
-        # Check if we've reached the instruction assumptions section (end of wire section)
-        elif in_wire_section and line.strip().startswith("i_DIV_"):
-            # Keep all instruction assumptions and everything after
-            while i < len(lines):
-                pruned_lines.append(lines[i])
-                i += 1
-            break
-        # Keep all other lines (before wire section, or empty lines in wire section)
-        else:
-            pruned_lines.append(line)
-            i += 1
-    
-    # Write the pruned header.sv
-    os.makedirs(os.path.dirname(pruned_header_sv), exist_ok=True)
-    with open(pruned_header_sv, "w") as f:
-        f.writelines(pruned_lines)
-
-def generate_spv_signals():
-    """
-    Generates the signals used for SPV
+    Generates the header for this squash detect step
+    This includes assumptions and wires that are used for the squash detect step
     """
 
-    header = "./reachable_pls_header.sv"
+    header = "../header_squash.sv"
     out = "./squash_detect.sv"
 
     reachable_pls = get_array("../xCoverAPerflocDiv/cover_individual.txt")
@@ -91,20 +20,48 @@ def generate_spv_signals():
         with open(header, "r") as f:
             out_f.write(f.read())
 
+        # Extract and write i1 opcode assumptions
+        directory = "../../opcodes_gen_all"
+
+        # Get list of all files in the opcodes directory
+        files = os.listdir(directory)
+        matched_file = None
+        for file in files:
+            if file == f"{i1_opcode}.sv":
+                matched_file = os.path.join(directory, file)
+                break
+        if not matched_file:
+            raise ValueError(f"{i1_opcode}.sv not found in {directory}")
+
+        # Read the entire matched opcode file into a single string
+        with open(matched_file, "r") as f:
+            file_contents = f.read()
+
+        out_f.write(file_contents.replace("i0", "i1"))
+
         out_f.write("\n")
 
         # wire in_perf_locs = PL1 || PL2 || ...;
-        in_perf_locs_string = "wire in_perf_locs = " + " || ".join(reachable_pls) + ";\n"
+        # in_perf_locs_string = "wire in_perf_locs = " + " || ".join(reachable_pls) + ";\n"
 
         # Write in_perf_locs wire
-        out_f.write(in_perf_locs_string)
+        # out_f.write(in_perf_locs_string)
 
         # Write left_perf_locs wire
-        out_f.write("wire left_perf_locs = !in_perf_locs;\n")
+        # out_f.write("wire left_perf_locs = !in_perf_locs;\n")
 
-        out_f.write("\n")
+        # out_f.write("\n")
 
-def generate_spv_check(name, from_signal, to_signal, from_precond=None, to_precond=None, keep_driving_logic=False):
+def generate_spv_check(
+    name, 
+    from_signal, 
+    to_signal, 
+    from_precond=None, 
+    to_precond=None, 
+    keep_driving_logic=False,
+    exclude_control_logic=False,
+    not_through=None
+):
     """
     Generates the SPV check for a given name, from_signal, to_signal, from_precond, to_precond
     Returns the string of that SPV check
@@ -120,6 +77,12 @@ def generate_spv_check(name, from_signal, to_signal, from_precond=None, to_preco
 
     if keep_driving_logic:
         spv_check += " -keep_driving_logic"
+
+    if exclude_control_logic:
+        spv_check += " -exclude_control_logic"
+
+    if not_through:
+        spv_check += f" -not_through {{{not_through}}}"
 
     return spv_check
 
@@ -170,36 +133,51 @@ def generate_spv_tcl():
     """
 
     template = "./squash_detect_template.tcl"
-    opcodes = obtain_opcodes()
-    instruction_signal = "id_stage_i.instruction"
+    instruction_signal_prefix = "id_stage_i.instruction"
     out = "./squash_detect.tcl"
     
     with open(out, "w") as out_f:
         # Write SPV checks
-        for instruction_name, opcode_portions in opcodes.items():
-            # Concatenate all opcode portions into a single precondition
-            from_precond = " && ".join(opcode_portions).replace("i0", instruction_signal)
+        from_signal = "id_stage_i.instruction[24:15] id_stage_i.instruction[11:7]"
+        from_precond = "i1_instn_begin"
+        # to_signal = "in_perf_locs"
+        to_signal = "left_perf_locs"
+        # to_signal = "flush_ctrl_if flush_ctrl_id flush_ctrl_ex flush_unissued_instr_ctrl_id"
+        # to_precond = "i0_issued_before || instn_begin"
+        # to_precond = "in_perf_locs && $past(in_perf_locs) && i0_issued_before"
+        # to_precond = "!in_perf_locs && $past(in_perf_locs) && !seen_instn_committed && !instn_committed"
+        # to_precond = "$past(in_perf_locs) && !seen_instn_committed && !instn_committed && i0_issued_before"
+        # to_precond = "$past(in_perf_locs) && !seen_instn_committed && !instn_committed"
+        to_precond = "!left_perf_locs"
+        # to_precond = None
 
-            # Append onto precondition that this instruction should not be the 
-            # same as the instruction we are detecting a squash
-            from_precond += " && id_stage_i.fetch_entry_i.address != pc0"
+        # not_through = "issue_stage_i.i_issue_read_operands.forward_rs1 issue_stage_i.i_issue_read_operands.forward_rs2 issue_stage_i.i_issue_read_operands.forward_rs3"
+        # not_through = "issue_stage_i.i_issue_read_operands.*"
+        # not_through = "issue_stage_i.rs1_iro_sb issue_stage_i.rs2_iro_sb issue_stage_i.rs3_iro_sb"
+        # not_through += " issue_stage_i.i_issue_read_operands.i_ariane_regfile.*"
+        # not_through += " issue_stage_i.i_issue_read_operands.forward_rs1 issue_stage_i.i_issue_read_operands.forward_rs2 issue_stage_i.i_issue_read_operands.forward_rs3"
+        # not_through = "issue_stage_i.i_issue_read_operands.stall issue_stage_i.i_issue_read_operands.issue_ack_o"
+        # not_through = "ex_stage_i.branch_unit_i.resolved_branch_o.is_mispredict"
+        # not_through = "issue_stage_i.i_scoreboard.rs1_fwd_req issue_stage_i.i_scoreboard.rs2_fwd_req issue_stage_i.i_scoreboard.rs3_fwd_req"
+        # not_through = "issue_stage_i.i_issue_read_operands.forward_rs1 issue_stage_i.i_issue_read_operands.forward_rs2 issue_stage_i.i_issue_read_operands.forward_rs3"
+        # not_through = "issue_stage_i.i_issue_read_operands.rd_clobber_gpr_i issue_stage_i.i_issue_read_operands.rd_clobber_fpr_i"
+        # not_through = None
+        
+        not_through = "issue_stage_i.i_issue_read_operands.rs1_i issue_stage_i.i_issue_read_operands.rs1_valid_i issue_stage_i.i_issue_read_operands.forward_rs1 issue_stage_i.i_issue_read_operands.rs2_i issue_stage_i.i_issue_read_operands.rs2_valid_i issue_stage_i.i_issue_read_operands.forward_rs2 issue_stage_i.i_issue_read_operands.rs3_i issue_stage_i.i_issue_read_operands.rs3_valid_i issue_stage_i.i_issue_read_operands.forward_rs3 issue_stage_i.i_issue_read_operands.rd_clobber_gpr_i issue_stage_i.i_issue_read_operands.rd_clobber_fpr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.waddr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.wdata_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.we_i"
 
-            to_precond = "left_perf_locs && $past(in_perf_locs)"
+        spv_check = generate_spv_check(
+            name=f"BNE_SQUASHER",
+            from_signal=from_signal,
+            to_signal=to_signal,
+            from_precond=from_precond,
+            to_precond=to_precond,
+            keep_driving_logic=True, # TODO check if we need
+            exclude_control_logic=False,
+            not_through=not_through
+        )
 
-            # Add check that instruction did not commit normally
-            to_precond += " && !seen_instn_committed && !instn_committed"
-
-            spv_check = generate_spv_check(
-                name=f"{instruction_name}_squasher",
-                from_signal=instruction_signal,
-                to_signal="left_perf_locs",
-                from_precond=from_precond,
-                to_precond=to_precond,
-                keep_driving_logic=False # TODO check if we need, this makes slower
-            )
-
-            out_f.write(spv_check)
-            out_f.write("\n")
+        out_f.write(spv_check)
+        out_f.write("\n")
 
         out_f.write("\n")
 
@@ -211,11 +189,5 @@ def generate_spv_tcl():
         out_f.write(template_content)
 
 if __name__ == "__main__":
-    # Prune header.sv
-    prune_header_sv()
-
-    # Generate Top File
-    generate_spv_signals()
-
-    # Generate SPV Checks
+    generate_header("BNE")
     generate_spv_tcl()

@@ -39,10 +39,10 @@ echo "==============================="
 
 ##### per instruction #####
 
-HEADERFILE=$(realpath ../header_ia.sv)
+HEADERFILE=$(realpath ../src/header_squash.sv)
 
-cp $HEADERFILE $INAME/header_ia.sv
-cat $INSTN >> $INAME/header_ia.sv
+cp $HEADERFILE $INAME/header_squash.sv
+cat $INSTN >> $INAME/header_squash.sv
 
 if [ ! -d "$INAME" ]; then 
     echo "Directory does not exists $INAME"

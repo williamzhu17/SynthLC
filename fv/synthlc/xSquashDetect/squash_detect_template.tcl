@@ -2,7 +2,7 @@ puts "=== Checking SPV consistency ==="
 check_spv -consistency
 
 # Auto-abstract black boxes
-check_spv -abstract -bbox_instance -mode seq
+# check_spv -abstract -bbox_instance -mode seq
 
 # List all SPV properties
 check_spv -list properties
