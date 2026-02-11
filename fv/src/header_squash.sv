@@ -34,6 +34,30 @@ IF_ID_CONTRACT: assume property (@(posedge clk_i)
 IN_OP_MODE: assume property (@(posedge clk_i) rst_ni == 1'd1);
 NOHALT: assume property (@(posedge clk_i) commit_stage_i.halt_i == 1'b0);
 
+// Assume that previous fetched PC will be different from current fetched PC
+wire fetch_fire = id_stage_i.fetch_entry_valid_i && fetch_ready_id_if;
+wire [63:0] fetch_pc = id_stage_i.fetch_entry_i.address;
+
+reg have_last_fire;
+reg [63:0] last_fire_pc;
+
+always_ff @(posedge clk_i) begin
+  if (!rst_ni) begin
+    have_last_fire <= 1'b0;
+    last_fire_pc <= '0;
+  end else if (fetch_fire) begin
+    have_last_fire <= 1'b1;
+    last_fire_pc <= fetch_pc;
+  end
+end
+
+PC_DIFF_LAST_INSTN: assume property (@(posedge clk_i) disable iff (!rst_ni)
+  fetch_fire && have_last_fire
+  |-> fetch_pc != last_fire_pc
+);
+
+// NO_ILLEGAL_INSTR: assume property (@(posedge clk_i) id_stage_i.decoder_i.illegal_instr == 1'b0);
+
 // =============================================================================
 // Set up instruction of interest 
 // i0 is for the instruction that we are detecting will be squashed
@@ -78,16 +102,20 @@ EXE_IUV: assume property (@(posedge clk_i) instn_begin |-> fetch_ready_id_if);
 // EVENTUAL_IN_PERF_LOCS: assume property (@(posedge clk_i) instn_begin |-> s_eventually(in_perf_locs));
 
 // Instruction is being committed
-wire instn_committing = commit_stage_i.commit_instr_i[0].pc == pc0 || commit_stage_i.commit_instr_i[1].pc == pc0;
+wire instn_committed = 
+    (commit_stage_i.commit_instr_i[0].pc == pc0 && commit_stage_i.commit_ack_o[0]) || 
+    (commit_stage_i.commit_instr_i[1].pc == pc0 && commit_stage_i.commit_ack_o[1]);
 
-reg seen_instn_committing;
+reg seen_instn_committed;
 
 always @(posedge clk_i) begin
     if (!rst_ni) begin
-        seen_instn_committing <= 1'b0;
-    end else if (instn_committing) begin
-        seen_instn_committing <= 1'b1;
-    end
+        seen_instn_committed <= 1'b0;
+    end else if (instn_committed) begin
+        seen_instn_committed <= 1'b1;
+		end else begin
+			  seen_instn_committed <= seen_instn_committed;
+		end
 end
 
 // =============================================================================
@@ -125,6 +153,23 @@ pc1_i1_assoc_2: assume property (@(posedge clk_i)
 
 ISSUE_ONCE_I1: assume property (@(posedge clk_i) i1_instn_begin |=> 
         always !(id_stage_i.fetch_entry_i.address == pc1));
+
+// i1 is being committed
+wire i1_committed = 
+    (commit_stage_i.commit_instr_i[0].pc == pc1 && commit_stage_i.commit_ack_o[0]) || 
+    (commit_stage_i.commit_instr_i[1].pc == pc1 && commit_stage_i.commit_ack_o[1]);
+
+reg seen_i1_committed;
+
+always @(posedge clk_i) begin
+	if (!rst_ni) begin
+		seen_i1_committed <= 1'b0;
+	end else if (i1_committed) begin
+		seen_i1_committed <= 1'b1;
+	end else begin
+		seen_i1_committed <= seen_i1_committed;
+	end
+end
 
 // =============================================================================
 // Set up relations between i0 and i1
@@ -448,4 +493,5 @@ end
 
 wire left_perf_locs; 
 
-assign left_perf_locs = !in_perf_locs && prev_in_perf_locs && !seen_instn_committing && !instn_committing;
+assign left_perf_locs = !in_perf_locs && prev_in_perf_locs && !seen_instn_committed && !instn_committed;
+// && !seen_i1_committed && !i1_committed;
