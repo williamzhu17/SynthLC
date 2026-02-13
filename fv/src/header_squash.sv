@@ -56,7 +56,7 @@ PC_DIFF_LAST_INSTN: assume property (@(posedge clk_i) disable iff (!rst_ni)
   |-> fetch_pc != last_fire_pc
 );
 
-// NO_ILLEGAL_INSTR: assume property (@(posedge clk_i) id_stage_i.decoder_i.illegal_instr == 1'b0);
+// PC_ALIGNED: assume property (@(posedge clk_i) id_stage_i.fetch_entry_i.address[1:0] == 2'b00);
 
 // =============================================================================
 // Set up instruction of interest 
@@ -493,5 +493,4 @@ end
 
 wire left_perf_locs; 
 
-assign left_perf_locs = !in_perf_locs && prev_in_perf_locs && !seen_instn_committed && !instn_committed;
-// && !seen_i1_committed && !i1_committed;
+assign left_perf_locs = !in_perf_locs && prev_in_perf_locs && !seen_instn_committed && !instn_committed && !seen_i1_committed && !i1_committed;

@@ -188,8 +188,8 @@ def generate_spv_tcl():
 
     with open(out, "w") as out_f:
         for opcode, opcode_portions in opcodes.items():
-            if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "SW":
-                continue
+            # if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "SW":
+            #     continue
 
             # Operand bits of instruction
             operand_bits = extract_operand_bits(opcode_portions, prune_neq_bits=False)
