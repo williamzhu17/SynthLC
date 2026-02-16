@@ -205,18 +205,14 @@ def generate_spv_tcl():
 
             # When we leave perf_locs abnormally
             to_signal = "left_perf_locs"
-            to_precond = "!left_perf_locs && $past(in_perf_locs)"
+            to_precond = "!left_perf_locs && $past(in_perf_locs) && !seen_i1_committed && !i1_committed"
 
             # Not through these signals
             not_through = "issue_stage_i.i_issue_read_operands.rs1_i issue_stage_i.i_issue_read_operands.rs1_valid_i issue_stage_i.i_issue_read_operands.forward_rs1 issue_stage_i.i_issue_read_operands.rs2_i issue_stage_i.i_issue_read_operands.rs2_valid_i issue_stage_i.i_issue_read_operands.forward_rs2 issue_stage_i.i_issue_read_operands.rs3_i issue_stage_i.i_issue_read_operands.rs3_valid_i issue_stage_i.i_issue_read_operands.forward_rs3 issue_stage_i.i_issue_read_operands.rd_clobber_gpr_i issue_stage_i.i_issue_read_operands.rd_clobber_fpr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.waddr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.wdata_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.we_i"
 
             # TODO not sure about these
-            not_through += " issue_stage_i.i_issue_read_operands.stall issue_stage_i.i_issue_read_operands.fu_busy"
+            # not_through += " issue_stage_i.i_issue_read_operands.stall issue_stage_i.i_issue_read_operands.fu_busy"
             not_through += " no_st_pending_commit"
-            not_through += " commit_stage_i.commit_ack_o"
-            # not_through += " issue_stage_i.i_issue_read_operands.issue_ack_o"
-            # not_through += " issue_stage_i.i_scoreboard.commit_pointer_q"
-            # not_through += " id_stage_i.decoder_i.instruction_o.rd"
 
             # TODO: idea about not tainting the destination register
             # not_through = "issue_stage_i.wbdata_i commit_stage_i.commit_ack_o"

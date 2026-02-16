@@ -56,7 +56,7 @@ PC_DIFF_LAST_INSTN: assume property (@(posedge clk_i) disable iff (!rst_ni)
   |-> fetch_pc != last_fire_pc
 );
 
-// PC_ALIGNED: assume property (@(posedge clk_i) id_stage_i.fetch_entry_i.address[1:0] == 2'b00);
+PC_ALIGNED: assume property (@(posedge clk_i) id_stage_i.fetch_entry_i.address[1:0] == 2'b00);
 
 // =============================================================================
 // Set up instruction of interest 
@@ -98,8 +98,7 @@ EVENTUAL_ISSUE: assume property (@(posedge clk_i) first |->
     s_eventually(instn_begin));
 EXE_IUV: assume property (@(posedge clk_i) instn_begin |-> fetch_ready_id_if);
 
-// TODO: check if we need
-// EVENTUAL_IN_PERF_LOCS: assume property (@(posedge clk_i) instn_begin |-> s_eventually(in_perf_locs));
+EVENTUAL_IN_PERF_LOCS: assume property (@(posedge clk_i) instn_begin |-> s_eventually(in_perf_locs));
 
 // Instruction is being committed
 wire instn_committed = 
@@ -194,9 +193,6 @@ always @(posedge clk_i) begin
 end
 
 I1_ISSUE_HB_I0: assume property (@(posedge clk_i) instn_begin |-> i1_issued_before);
-
-// TODO: adjust
-// I1_RIGHT_BEFORE_I0: assume property (@(posedge clk_i) i1_instn_begin |=> instn_begin);
 
 // =============================================================================
 // ## Performing location annotation
@@ -440,6 +436,7 @@ wire mem_req_s1 =
 	(ex_stage_i.lsu_i.i_ord_sram.req_i == 1'd1) && 
 	 1'b1; 
 
+// TODO: use this for general case
 wire in_perf_locs = serdiv_unit_divide_s1 ||
 										serdiv_unit_divide_s2 ||
 										id_stage_s1 ||
