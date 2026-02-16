@@ -211,11 +211,11 @@ def generate_spv_tcl():
             not_through = "issue_stage_i.i_issue_read_operands.rs1_i issue_stage_i.i_issue_read_operands.rs1_valid_i issue_stage_i.i_issue_read_operands.forward_rs1 issue_stage_i.i_issue_read_operands.rs2_i issue_stage_i.i_issue_read_operands.rs2_valid_i issue_stage_i.i_issue_read_operands.forward_rs2 issue_stage_i.i_issue_read_operands.rs3_i issue_stage_i.i_issue_read_operands.rs3_valid_i issue_stage_i.i_issue_read_operands.forward_rs3 issue_stage_i.i_issue_read_operands.rd_clobber_gpr_i issue_stage_i.i_issue_read_operands.rd_clobber_fpr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.waddr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.wdata_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.we_i"
 
             # TODO not sure about these
-            # not_through += " issue_stage_i.i_issue_read_operands.stall issue_stage_i.i_issue_read_operands.fu_busy"
+            not_through += " issue_stage_i.i_issue_read_operands.stall"
+            # not_through += "  issue_stage_i.i_issue_read_operands.fu_busy"
             not_through += " no_st_pending_commit"
 
             # TODO: idea about not tainting the destination register
-            # not_through = "issue_stage_i.wbdata_i commit_stage_i.commit_ack_o"
             # not_through = None
 
             spv_check = generate_spv_check(
