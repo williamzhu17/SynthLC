@@ -152,6 +152,9 @@ pc1_i1_assoc_2: assume property (@(posedge clk_i)
 
 ISSUE_ONCE_I1: assume property (@(posedge clk_i) i1_instn_begin |=> 
         always !(id_stage_i.fetch_entry_i.address == pc1));
+EVENTUAL_ISSUE_I1: assume property (@(posedge clk_i) first |->
+    s_eventually(i1_instn_begin));
+EXE_IUV_I1: assume property (@(posedge clk_i) i1_instn_begin |-> fetch_ready_id_if);
 
 // i1 is being committed
 wire i1_committed = 
@@ -193,6 +196,10 @@ always @(posedge clk_i) begin
 end
 
 I1_ISSUE_HB_I0: assume property (@(posedge clk_i) instn_begin |-> i1_issued_before);
+I0_EVENTUAL_AFTER_I1: assume property (@(posedge clk_i) i1_instn_begin |-> s_eventually(instn_begin));
+
+// One cycle before
+I1_ONE_CYCLE_BEFORE_I0: assume property (@(posedge clk_i) i1_instn_begin |-> ##1 instn_begin);
 
 // =============================================================================
 // ## Performing location annotation
