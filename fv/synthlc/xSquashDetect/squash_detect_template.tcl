@@ -1,7 +1,7 @@
 set_spv_autoprove_expose_status_progress on
 set_spv_show_bound_progress_in_log on
 set_spv_show_proof_log on
-# set_spv_prove_single_thread off
+set_spv_prove_single_thread off
 
 puts "=== Checking SPV consistency ==="
 check_spv -consistency

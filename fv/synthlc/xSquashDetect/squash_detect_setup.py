@@ -184,7 +184,6 @@ def generate_spv_tcl():
     out = "./squash_detect.tcl"
 
     opcodes = obtain_opcodes()
-    instruction_prefix = "id_stage_i.instruction"
 
     with open(out, "w") as out_f:
         for opcode, opcode_portions in opcodes.items():
@@ -198,25 +197,26 @@ def generate_spv_tcl():
                 print("No operand bits found for opcode: ", opcode)
                 continue
 
-            from_signal = " ".join(operand_bits).replace("i0", instruction_prefix)
+            # from_signal = " ".join(operand_bits).replace("i0", instruction_prefix)
+            from_signal = "fu_data_id_ex.operand_a fu_data_id_ex.operand_b"
 
             # Equals a particular op
             from_precond = " && ".join(opcode_portions).replace("i0", "i1")
-            from_precond += " && i1_instn_begin"
+            from_precond += " && i1_read_ops"
 
             # When we leave perf_locs abnormally
             to_signal = "left_perf_locs"
             to_precond = "!left_perf_locs && $past(in_perf_locs) && !seen_i1_committed && !i1_committed"
 
             # Not through these signals
-            not_through = "issue_stage_i.i_issue_read_operands.rs1_i issue_stage_i.i_issue_read_operands.rs1_valid_i issue_stage_i.i_issue_read_operands.forward_rs1 issue_stage_i.i_issue_read_operands.rs2_i issue_stage_i.i_issue_read_operands.rs2_valid_i issue_stage_i.i_issue_read_operands.forward_rs2 issue_stage_i.i_issue_read_operands.rs3_i issue_stage_i.i_issue_read_operands.rs3_valid_i issue_stage_i.i_issue_read_operands.forward_rs3 issue_stage_i.i_issue_read_operands.rd_clobber_gpr_i issue_stage_i.i_issue_read_operands.rd_clobber_fpr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.waddr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.wdata_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.we_i"
+            # not_through = "issue_stage_i.i_issue_read_operands.rs1_i issue_stage_i.i_issue_read_operands.rs1_valid_i issue_stage_i.i_issue_read_operands.forward_rs1 issue_stage_i.i_issue_read_operands.rs2_i issue_stage_i.i_issue_read_operands.rs2_valid_i issue_stage_i.i_issue_read_operands.forward_rs2 issue_stage_i.i_issue_read_operands.rs3_i issue_stage_i.i_issue_read_operands.rs3_valid_i issue_stage_i.i_issue_read_operands.forward_rs3 issue_stage_i.i_issue_read_operands.rd_clobber_gpr_i issue_stage_i.i_issue_read_operands.rd_clobber_fpr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.waddr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.wdata_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.we_i"
 
             # TODO not sure about these
-            not_through += " issue_stage_i.i_issue_read_operands.stall"
-            not_through += " no_st_pending_commit"
+            # not_through += " issue_stage_i.i_issue_read_operands.stall"
+            # not_through += " no_st_pending_commit"
 
             # TODO: idea about not tainting the destination register
-            # not_through = None
+            not_through = None
 
             spv_check = generate_spv_check(
                 name=f"{opcode}_SQUASHER",

@@ -117,6 +117,8 @@ always @(posedge clk_i) begin
 		end
 end
 
+wire instn_read_ops = pc_id_ex == pc0 && issue_stage_i.i_issue_read_operands.vld_o;
+
 // =============================================================================
 // Set up instruction of interest 
 // i1 is for the instruction that we are testing will cause squash
@@ -172,6 +174,8 @@ always @(posedge clk_i) begin
 		seen_i1_committed <= seen_i1_committed;
 	end
 end
+
+wire i1_read_ops = pc_id_ex == pc1 && issue_stage_i.i_issue_read_operands.vld_o;
 
 // =============================================================================
 // Set up relations between i0 and i1
