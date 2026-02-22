@@ -199,7 +199,7 @@ I1_ISSUE_HB_I0: assume property (@(posedge clk_i) instn_begin |-> i1_issued_befo
 I0_EVENTUAL_AFTER_I1: assume property (@(posedge clk_i) i1_instn_begin |-> s_eventually(instn_begin));
 
 // One cycle before
-I1_ONE_CYCLE_BEFORE_I0: assume property (@(posedge clk_i) i1_instn_begin |-> ##1 instn_begin);
+// I1_ONE_CYCLE_BEFORE_I0: assume property (@(posedge clk_i) i1_instn_begin |-> ##1 instn_begin);
 
 // =============================================================================
 // ## Performing location annotation

@@ -188,8 +188,8 @@ def generate_spv_tcl():
 
     with open(out, "w") as out_f:
         for opcode, opcode_portions in opcodes.items():
-            # if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "SW" and opcode != "LW":
-            #     continue
+            if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "SW" and opcode != "LW" and opcode != "CSRRWI":
+                continue
 
             # Operand bits of instruction
             operand_bits = extract_operand_bits(opcode_portions, prune_neq_bits=False)
@@ -213,7 +213,6 @@ def generate_spv_tcl():
 
             # TODO not sure about these
             not_through += " issue_stage_i.i_issue_read_operands.stall"
-            # not_through += "  issue_stage_i.i_issue_read_operands.fu_busy"
             not_through += " no_st_pending_commit"
 
             # TODO: idea about not tainting the destination register
@@ -226,7 +225,7 @@ def generate_spv_tcl():
                 from_precond=from_precond,
                 to_precond=to_precond,
                 not_through=not_through,
-                keep_driving_logic=False,
+                keep_driving_logic=True,
                 exclude_control_logic=False
             )
 
