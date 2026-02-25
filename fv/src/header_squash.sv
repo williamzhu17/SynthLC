@@ -498,3 +498,31 @@ end
 wire left_perf_locs; 
 
 assign left_perf_locs = !in_perf_locs && prev_in_perf_locs && !seen_instn_committed && !instn_committed && !seen_i1_committed && !i1_committed;
+
+// NOP is andi x0, x0, 0
+wire i1_nop = id_stage_i.instruction == 32'h00000013 && i1_instn_begin;
+reg seen_i1_nop;
+wire i1_ecall = id_stage_i.instruction == 32'h00000073 && i1_instn_begin;
+reg seen_i1_ecall;
+wire i1_ebreak = id_stage_i.instruction == 32'h00100073 && i1_instn_begin;
+reg seen_i1_ebreak;
+wire i1_fencei = id_stage_i.instruction == 32'h0000100f && i1_instn_begin;
+reg seen_i1_fencei;
+
+always @(posedge clk_i) begin
+  if (!rst_ni) begin
+    seen_i1_nop <= 1'b0;
+    seen_i1_ecall <= 1'b0;
+    seen_i1_ebreak <= 1'b0;
+    seen_i1_fencei <= 1'b0;
+	end else begin
+		seen_i1_nop <= i1_nop ? 1'b1 : seen_i1_nop;
+		seen_i1_ecall <= i1_ecall ? 1'b1 : seen_i1_ecall;
+		seen_i1_ebreak <= i1_ebreak ? 1'b1 : seen_i1_ebreak;
+		seen_i1_fencei <= i1_fencei ? 1'b1 : seen_i1_fencei;
+	end
+end
+
+wire left_perf_locs_ecall = !in_perf_locs && prev_in_perf_locs && !seen_instn_committed && !instn_committed && seen_i1_ecall && !i1_committed && !seen_i1_committed;
+wire left_perf_locs_ebreak = !in_perf_locs && prev_in_perf_locs && !seen_instn_committed && !instn_committed && seen_i1_ebreak && !i1_committed && !seen_i1_committed;
+wire left_perf_locs_fencei = !in_perf_locs && prev_in_perf_locs && !seen_instn_committed && !instn_committed && seen_i1_fencei && !i1_committed && !seen_i1_committed;
