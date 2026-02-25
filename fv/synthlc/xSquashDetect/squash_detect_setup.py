@@ -188,7 +188,7 @@ def generate_spv_tcl():
 
     with open(out, "w") as out_f:
         for opcode, opcode_portions in opcodes.items():
-            # if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "SW" and opcode != "LW" and opcode != "CSRRWI":
+            # if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "SW" and opcode != "LW" and opcode != "CSRRWI" and opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCEI":
             # if opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCEI":
             #     continue
 
@@ -202,9 +202,8 @@ def generate_spv_tcl():
             from_precond += " && i1_instn_begin"
 
             # When we leave perf_locs abnormally
-            # TODO: remove i1_committed here
             to_signal = "left_perf_locs"
-            to_precond = "!left_perf_locs && in_perf_locs && $past(in_perf_locs) && !seen_instn_committed && !instn_committed && !seen_i1_committed && !i1_committed"
+            to_precond = "!left_perf_locs && in_perf_locs && $past(in_perf_locs) && !seen_instn_committed && !instn_committed"
 
             # Not through these signals
             not_through = "issue_stage_i.i_issue_read_operands.rs1_i issue_stage_i.i_issue_read_operands.rs1_valid_i issue_stage_i.i_issue_read_operands.forward_rs1 issue_stage_i.i_issue_read_operands.rs2_i issue_stage_i.i_issue_read_operands.rs2_valid_i issue_stage_i.i_issue_read_operands.forward_rs2 issue_stage_i.i_issue_read_operands.rs3_i issue_stage_i.i_issue_read_operands.rs3_valid_i issue_stage_i.i_issue_read_operands.forward_rs3 issue_stage_i.i_issue_read_operands.rd_clobber_gpr_i issue_stage_i.i_issue_read_operands.rd_clobber_fpr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.waddr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.wdata_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.we_i"
