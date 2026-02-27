@@ -190,7 +190,8 @@ def generate_spv_tcl():
         for opcode, opcode_portions in opcodes.items():
             # if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "SW" and opcode != "LW" and opcode != "CSRRWI" and opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCEI":
             # if opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCEI":
-            #     continue
+            # if opcode != "FENCE" and opcode != "FENCEI": 
+                # continue
 
             # Operand bits of instruction
             operand_bits = extract_operand_bits(opcode_portions, prune_neq_bits=False)
@@ -202,15 +203,17 @@ def generate_spv_tcl():
             from_precond += " && i1_instn_begin"
 
             # When we leave perf_locs abnormally
-            to_signal = "left_perf_locs"
-            to_precond = "!left_perf_locs && in_perf_locs && $past(in_perf_locs) && !seen_instn_committed && !instn_committed"
+            # to_signal = "left_perf_locs"
+            # to_precond = "!left_perf_locs && in_perf_locs && $past(in_perf_locs) && !seen_instn_committed && !instn_committed"
+            to_signal = "commit_stage_i.fence_o"
+            to_precond = None
 
             # Not through these signals
             not_through = "issue_stage_i.i_issue_read_operands.rs1_i issue_stage_i.i_issue_read_operands.rs1_valid_i issue_stage_i.i_issue_read_operands.forward_rs1 issue_stage_i.i_issue_read_operands.rs2_i issue_stage_i.i_issue_read_operands.rs2_valid_i issue_stage_i.i_issue_read_operands.forward_rs2 issue_stage_i.i_issue_read_operands.rs3_i issue_stage_i.i_issue_read_operands.rs3_valid_i issue_stage_i.i_issue_read_operands.forward_rs3 issue_stage_i.i_issue_read_operands.rd_clobber_gpr_i issue_stage_i.i_issue_read_operands.rd_clobber_fpr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.waddr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.wdata_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.we_i"
 
             # TODO not sure about these
             not_through += " issue_stage_i.i_issue_read_operands.stall"
-            not_through += " no_st_pending_commit"
+            # not_through += " no_st_pending_commit"
 
             # TODO: idea about not tainting the destination register
             # not_through = None
@@ -220,17 +223,18 @@ def generate_spv_tcl():
                     from_signal = "id_stage_i.instruction"
                     from_precond = "i1_nop"
                     to_signal = "left_perf_locs_ecall"
-                    to_precond = "!left_perf_locs_ecall && in_perf_locs && $past(in_perf_locs) && !seen_instn_committed && !instn_committed"
+                    to_precond = "!left_perf_locs_ecall && in_perf_locs && $past(in_perf_locs)"
                 elif opcode == "EBREAK":
                     from_signal = "id_stage_i.instruction"
                     from_precond = "i1_nop"
                     to_signal = "left_perf_locs_ebreak"
-                    to_precond = "!left_perf_locs_ebreak && in_perf_locs && $past(in_perf_locs) && !seen_instn_committed && !instn_committed"
+                    to_precond = "!left_perf_locs_ebreak && in_perf_locs && $past(in_perf_locs)"
                 elif opcode == "FENCEI":
                     from_signal = "id_stage_i.instruction"
                     from_precond = "i1_nop"
                     to_signal = "left_perf_locs_fencei"
-                    to_precond = "!left_perf_locs_fencei && in_perf_locs && $past(in_perf_locs) && !seen_instn_committed && !instn_committed"
+                    to_precond = "!left_perf_locs_fencei && in_perf_locs && $past(in_perf_locs)"
+                    # to_precond = None
 
             spv_check = generate_spv_check(
                 name=f"{opcode}_SQUASHER",

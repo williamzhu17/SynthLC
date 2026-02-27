@@ -199,7 +199,7 @@ I1_ISSUE_HB_I0: assume property (@(posedge clk_i) instn_begin |-> i1_issued_befo
 I0_EVENTUAL_AFTER_I1: assume property (@(posedge clk_i) i1_instn_begin |-> s_eventually(instn_begin));
 
 // One cycle before
-// I1_ONE_CYCLE_BEFORE_I0: assume property (@(posedge clk_i) i1_instn_begin |-> ##1 instn_begin);
+I1_ONE_CYCLE_BEFORE_I0: assume property (@(posedge clk_i) i1_instn_begin |-> ##1 instn_begin);
 
 // =============================================================================
 // ## Performing location annotation
@@ -523,6 +523,7 @@ always @(posedge clk_i) begin
 	end
 end
 
-wire left_perf_locs_ecall = !in_perf_locs && prev_in_perf_locs && !seen_instn_committed && !instn_committed && seen_i1_ecall && !i1_committed && !seen_i1_committed;
-wire left_perf_locs_ebreak = !in_perf_locs && prev_in_perf_locs && !seen_instn_committed && !instn_committed && seen_i1_ebreak && !i1_committed && !seen_i1_committed;
-wire left_perf_locs_fencei = !in_perf_locs && prev_in_perf_locs && !seen_instn_committed && !instn_committed && seen_i1_fencei && !i1_committed && !seen_i1_committed;
+wire left_perf_locs_ecall = !in_perf_locs && prev_in_perf_locs && seen_i1_ecall;
+wire left_perf_locs_ebreak = !in_perf_locs && prev_in_perf_locs && seen_i1_ebreak;
+wire left_perf_locs_fencei = !in_perf_locs && prev_in_perf_locs && seen_i1_fencei;
+
