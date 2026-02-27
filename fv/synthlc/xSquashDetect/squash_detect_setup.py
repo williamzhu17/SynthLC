@@ -191,7 +191,7 @@ def generate_spv_tcl():
             # if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "SW" and opcode != "LW" and opcode != "CSRRWI" and opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCE" and opcode != "FENCEI":
             # if opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCEI" and opcode != "FENCE":
             # if opcode != "FENCE":
-            #     continue
+                # continue
 
             # Operand bits of instruction
             operand_bits = extract_operand_bits(opcode_portions, prune_neq_bits=False)
@@ -232,6 +232,12 @@ def generate_spv_tcl():
                     from_precond = "i1_nop"
                     to_signal = "left_perf_locs_fencei"
                     to_precond = "!left_perf_locs_fencei && in_perf_locs && $past(in_perf_locs)"
+
+            if opcode == "FENCE":
+                from_signal = "id_stage_i.instruction"
+                from_precond = "i1_nop"
+                to_signal = "left_perf_locs_fence"
+                to_precond = "!left_perf_locs_fence && in_perf_locs && $past(in_perf_locs)"
 
             spv_check = generate_spv_check(
                 name=f"{opcode}_SQUASHER",

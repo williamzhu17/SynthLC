@@ -509,21 +509,26 @@ reg seen_i1_ebreak;
 wire i1_fencei = id_stage_i.instruction == 32'h0000100f && i1_instn_begin;
 reg seen_i1_fencei;
 
+wire i1_fence = id_stage_i.instruction == 32'h0000000f && i1_instn_begin;
+reg seen_i1_fence;
+
 always @(posedge clk_i) begin
   if (!rst_ni) begin
     seen_i1_nop <= 1'b0;
     seen_i1_ecall <= 1'b0;
     seen_i1_ebreak <= 1'b0;
     seen_i1_fencei <= 1'b0;
+    seen_i1_fence <= 1'b0;
 	end else begin
 		seen_i1_nop <= i1_nop ? 1'b1 : seen_i1_nop;
 		seen_i1_ecall <= i1_ecall ? 1'b1 : seen_i1_ecall;
 		seen_i1_ebreak <= i1_ebreak ? 1'b1 : seen_i1_ebreak;
 		seen_i1_fencei <= i1_fencei ? 1'b1 : seen_i1_fencei;
+		seen_i1_fence <= i1_fence ? 1'b1 : seen_i1_fence;
 	end
 end
 
 wire left_perf_locs_ecall = !in_perf_locs && prev_in_perf_locs && seen_i1_ecall;
 wire left_perf_locs_ebreak = !in_perf_locs && prev_in_perf_locs && seen_i1_ebreak;
 wire left_perf_locs_fencei = !in_perf_locs && prev_in_perf_locs && seen_i1_fencei;
-
+wire left_perf_locs_fence = !in_perf_locs && prev_in_perf_locs && seen_i1_fence;
