@@ -497,7 +497,7 @@ end
 
 wire left_perf_locs; 
 
-assign left_perf_locs = !in_perf_locs && prev_in_perf_locs && !seen_instn_committed && !instn_committed && !seen_i1_committed && !i1_committed;
+assign left_perf_locs = !in_perf_locs && prev_in_perf_locs;
 
 // NOP is andi x0, x0, 0
 wire i1_nop = id_stage_i.instruction == 32'h00000013 && i1_instn_begin;
