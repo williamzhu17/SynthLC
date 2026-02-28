@@ -4,6 +4,40 @@ import sys
 sys.path.append("../../src")
 from util import *
 
+def i1_signal_detect_string(opcode, opcode_requirement_list):
+    """
+    Generates signals for header. For example:
+    wire i1_nop = id_stage_i.instruction == 32'h00000013 && i1_instn_begin;
+    """
+
+    replaced_requirements = " && ".join([req.replace("i0", "id_stage_i.instruction") for req in opcode_requirement_list])
+
+    signal_string = f"wire i1_{opcode} = {replaced_requirements} && i1_instn_begin;"
+    seen_string = f"reg seen_i1_{opcode};"
+
+    return f"{signal_string}\n{seen_string}\n"
+
+def always_block_gen(opcode_list):
+    """
+    Generates the always block for the seen signals
+    """
+
+    always_block = "always @(posedge clk_i) begin\n"
+    always_block += "  if (!rst_ni) begin\n"
+
+    for opcode in opcode_list:
+        always_block += f"    seen_i1_{opcode} <= 1'b0;\n"
+
+    always_block += "  end else begin\n"
+
+    for opcode in opcode_list:
+        always_block += f"    seen_i1_{opcode} <= i1_{opcode} ? 1'b1 : seen_i1_{opcode};\n"
+
+    always_block += "  end\n"
+    always_block += "end\n"
+
+    return always_block
+
 def generate_header():
     """
     Generates the header for this squash detect step
@@ -20,37 +54,26 @@ def generate_header():
         with open(header, "r") as f:
             out_f.write(f.read())
 
-        # Extract and write i1 opcode assumptions
-        # directory = "../../opcodes_gen_all"
+        opcodes = obtain_opcodes()
 
-        # # Get list of all files in the opcodes directory
-        # files = os.listdir(directory)
-        # matched_file = None
-        # for file in files:
-        #     if file == f"{i1_opcode}.sv":
-        #         matched_file = os.path.join(directory, file)
-        #         break
-        # if not matched_file:
-        #     raise ValueError(f"{i1_opcode}.sv not found in {directory}")
+        # Write the other opcode signals
+        for opcode, opcode_portions in opcodes.items():
+            signal_detect_string = i1_signal_detect_string(opcode, opcode_portions)
+            out_f.write(signal_detect_string)
 
-        # # Read the entire matched opcode file into a single string
-        # with open(matched_file, "r") as f:
-        #     file_contents = f.read()
+        out_f.write("\n")
 
-        # out_f.write(file_contents.replace("i0", "i1"))
+        # Write always block for seen signals
+        out_f.write(always_block_gen(opcodes.keys()))
 
-        # out_f.write("\n")
+        out_f.write("\n")
 
-        # wire in_perf_locs = PL1 || PL2 || ...;
-        # in_perf_locs_string = "wire in_perf_locs = " + " || ".join(reachable_pls) + ";\n"
-
-        # Write in_perf_locs wire
-        # out_f.write(in_perf_locs_string)
-
-        # Write left_perf_locs wire
-        # out_f.write("wire left_perf_locs = !in_perf_locs;\n")
-
-        # out_f.write("\n")
+        # Write left_perf_locs wires
+        for opcode in opcodes.keys():
+            left_perf_locs_string = f"wire left_perf_locs_{opcode} = !in_perf_locs && prev_in_perf_locs && seen_i1_{opcode} && !seen_i1_committed && !i1_committed;\n"
+            out_f.write(left_perf_locs_string)
+        
+        out_f.write("\n")
 
 def generate_spv_check(
     name, 
@@ -188,23 +211,17 @@ def generate_spv_tcl():
 
     with open(out, "w") as out_f:
         for opcode, opcode_portions in opcodes.items():
-            # if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "SW" and opcode != "LW" and opcode != "CSRRWI" and opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCE" and opcode != "FENCEI":
+            if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "SW" and opcode != "LW" and opcode != "CSRRWI" and opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCE" and opcode != "FENCEI":
+                continue
             # if opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCEI" and opcode != "FENCE":
-            # if opcode != "FENCE":
-                # continue
+            if opcode == "NOP":
+                continue
 
-            # Operand bits of instruction
-            operand_bits = extract_operand_bits(opcode_portions, prune_neq_bits=False)
+            from_signal = "id_stage_i.instruction"
+            from_precond = f"i1_NOP"
 
-            from_signal = " ".join(operand_bits).replace("i0", instruction_prefix)
-
-            # Equals a particular op
-            from_precond = " && ".join(opcode_portions).replace("i0", "i1")
-            from_precond += " && i1_instn_begin"
-
-            # When we leave perf_locs abnormally
-            to_signal = "left_perf_locs"
-            to_precond = "!left_perf_locs && in_perf_locs && $past(in_perf_locs)"
+            to_signal = f"left_perf_locs_{opcode}"
+            to_precond = f"!left_perf_locs_{opcode} && in_perf_locs && $past(in_perf_locs)"
 
             # Not through these signals
             not_through = "issue_stage_i.i_issue_read_operands.rs1_i issue_stage_i.i_issue_read_operands.rs1_valid_i issue_stage_i.i_issue_read_operands.forward_rs1 issue_stage_i.i_issue_read_operands.rs2_i issue_stage_i.i_issue_read_operands.rs2_valid_i issue_stage_i.i_issue_read_operands.forward_rs2 issue_stage_i.i_issue_read_operands.rs3_i issue_stage_i.i_issue_read_operands.rs3_valid_i issue_stage_i.i_issue_read_operands.forward_rs3 issue_stage_i.i_issue_read_operands.rd_clobber_gpr_i issue_stage_i.i_issue_read_operands.rd_clobber_fpr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.waddr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.wdata_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.we_i"
@@ -215,29 +232,6 @@ def generate_spv_tcl():
 
             # TODO: idea about not tainting the destination register
             # not_through = None
-
-            if len(operand_bits) == 0:
-                if opcode == "ECALL":
-                    from_signal = "id_stage_i.instruction"
-                    from_precond = "i1_nop"
-                    to_signal = "left_perf_locs_ecall"
-                    to_precond = "!left_perf_locs_ecall && in_perf_locs && $past(in_perf_locs)"
-                elif opcode == "EBREAK":
-                    from_signal = "id_stage_i.instruction"
-                    from_precond = "i1_nop"
-                    to_signal = "left_perf_locs_ebreak"
-                    to_precond = "!left_perf_locs_ebreak && in_perf_locs && $past(in_perf_locs)"
-                elif opcode == "FENCEI":
-                    from_signal = "id_stage_i.instruction"
-                    from_precond = "i1_nop"
-                    to_signal = "left_perf_locs_fencei"
-                    to_precond = "!left_perf_locs_fencei && in_perf_locs && $past(in_perf_locs)"
-
-            if opcode == "FENCE":
-                from_signal = "id_stage_i.instruction"
-                from_precond = "i1_nop"
-                to_signal = "left_perf_locs_fence"
-                to_precond = "!left_perf_locs_fence && in_perf_locs && $past(in_perf_locs)"
 
             spv_check = generate_spv_check(
                 name=f"{opcode}_SQUASHER",

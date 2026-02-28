@@ -199,7 +199,7 @@ I1_ISSUE_HB_I0: assume property (@(posedge clk_i) instn_begin |-> i1_issued_befo
 I0_EVENTUAL_AFTER_I1: assume property (@(posedge clk_i) i1_instn_begin |-> s_eventually(instn_begin));
 
 // One cycle before
-I1_ONE_CYCLE_BEFORE_I0: assume property (@(posedge clk_i) i1_instn_begin |-> ##1 instn_begin);
+// I1_ONE_CYCLE_BEFORE_I0: assume property (@(posedge clk_i) i1_instn_begin |-> ##1 instn_begin);
 
 // =============================================================================
 // ## Performing location annotation
@@ -494,41 +494,3 @@ always_ff @(posedge clk_i) begin
 		prev_in_perf_locs <= in_perf_locs;
 	end
 end
-
-wire left_perf_locs; 
-
-assign left_perf_locs = !in_perf_locs && prev_in_perf_locs;
-
-// NOP is andi x0, x0, 0
-wire i1_nop = id_stage_i.instruction == 32'h00000013 && i1_instn_begin;
-reg seen_i1_nop;
-wire i1_ecall = id_stage_i.instruction == 32'h00000073 && i1_instn_begin;
-reg seen_i1_ecall;
-wire i1_ebreak = id_stage_i.instruction == 32'h00100073 && i1_instn_begin;
-reg seen_i1_ebreak;
-wire i1_fencei = id_stage_i.instruction == 32'h0000100f && i1_instn_begin;
-reg seen_i1_fencei;
-
-wire i1_fence = id_stage_i.instruction == 32'h0000000f && i1_instn_begin;
-reg seen_i1_fence;
-
-always @(posedge clk_i) begin
-  if (!rst_ni) begin
-    seen_i1_nop <= 1'b0;
-    seen_i1_ecall <= 1'b0;
-    seen_i1_ebreak <= 1'b0;
-    seen_i1_fencei <= 1'b0;
-    seen_i1_fence <= 1'b0;
-	end else begin
-		seen_i1_nop <= i1_nop ? 1'b1 : seen_i1_nop;
-		seen_i1_ecall <= i1_ecall ? 1'b1 : seen_i1_ecall;
-		seen_i1_ebreak <= i1_ebreak ? 1'b1 : seen_i1_ebreak;
-		seen_i1_fencei <= i1_fencei ? 1'b1 : seen_i1_fencei;
-		seen_i1_fence <= i1_fence ? 1'b1 : seen_i1_fence;
-	end
-end
-
-wire left_perf_locs_ecall = !in_perf_locs && prev_in_perf_locs && seen_i1_ecall;
-wire left_perf_locs_ebreak = !in_perf_locs && prev_in_perf_locs && seen_i1_ebreak;
-wire left_perf_locs_fencei = !in_perf_locs && prev_in_perf_locs && seen_i1_fencei;
-wire left_perf_locs_fence = !in_perf_locs && prev_in_perf_locs && seen_i1_fence;
