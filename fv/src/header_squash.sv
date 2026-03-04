@@ -171,10 +171,8 @@ reg seen_i1_committed;
 always @(posedge clk_i) begin
 	if (!rst_ni) begin
 		seen_i1_committed <= 1'b0;
-	end else if (i1_committed) begin
-		seen_i1_committed <= 1'b1;
 	end else begin
-		seen_i1_committed <= seen_i1_committed;
+        seen_i1_committed <= i1_committed ? 1'b1 : seen_i1_committed;
 	end
 end
 

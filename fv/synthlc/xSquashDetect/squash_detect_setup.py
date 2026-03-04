@@ -74,9 +74,12 @@ def generate_header():
             out_f.write(left_perf_locs_string)
 
             icache_req_trap = f"tmp_icache_dreq_if_cache.vaddr == trap_vector_base_commit_pcgen && tmp_icache_dreq_if_cache.req"
-            not_branch_to_trap = ""
             left_perf_locs_exception_string = f"wire left_perf_locs_exception_{opcode} = !in_perf_locs && prev_in_perf_locs && {icache_req_trap} ? seen_i1_{opcode} && !seen_i1_committed && !i1_committed && !i1_branch_to_trap : 1'b0;\n"
             out_f.write(left_perf_locs_exception_string)
+
+            no_icache_req_trap = f"tmp_icache_dreq_if_cache.vaddr != trap_vector_base_commit_pcgen && tmp_icache_dreq_if_cache.req"
+            left_perf_locs_speculation_string = f"wire left_perf_locs_speculation_{opcode} = !in_perf_locs && prev_in_perf_locs && {no_icache_req_trap} ? seen_i1_{opcode} && !seen_i1_committed && !i1_committed && !i1_branch_to_trap : 1'b0;\n"
+            out_f.write(left_perf_locs_speculation_string)
         
         out_f.write("\n")
 
@@ -233,6 +236,7 @@ def generate_spv_tcl():
 
             to_signal = f"left_perf_locs_{opcode}"
             to_signal_exception = f"left_perf_locs_exception_{opcode}"
+            to_signal_speculation = f"left_perf_locs_speculation_{opcode}"
             to_precond = f"!left_perf_locs_{opcode} && in_perf_locs && $past(in_perf_locs)"
 
             # Not through these signals
@@ -247,6 +251,7 @@ def generate_spv_tcl():
             not_through += " no_st_pending_commit"
 
             # Exception case
+            # Need to account for timing behaviors and how it fetch addr == trap addr can be potentially delayed
             spv_check_exception = generate_spv_check(
                 name=f"{opcode}_EXCEPTION",
                 from_signal=from_signal,
@@ -259,6 +264,21 @@ def generate_spv_tcl():
             )
 
             out_f.write(spv_check_exception)
+            out_f.write("\n")
+
+            # Speculation case
+            spv_check_speculation = generate_spv_check(
+                name=f"{opcode}_SPECULATION",
+                from_signal=from_signal,
+                to_signal=to_signal_speculation,
+                from_precond=from_precond,
+                to_precond=to_precond,
+                not_through=not_through,
+                keep_driving_logic=True,
+                exclude_control_logic=False
+            )
+
+            out_f.write(spv_check_speculation)
             out_f.write("\n")
 
             # General case
