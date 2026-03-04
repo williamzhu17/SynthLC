@@ -227,6 +227,36 @@ I0_EVENTUAL_FETCH_AFTER_I1: assume property (@(posedge clk_i) i1_instn_begin |->
 // I1_ONE_CYCLE_BEFORE_I0: assume property (@(posedge clk_i) i1_instn_begin |-> ##1 instn_begin);
 
 // =============================================================================
+// ## Branch cannot jump to trap
+// ============================================================================= 
+
+wire is_i1_branch = id_stage_i.instruction[6:0] == 7'b1100011 && i1_instn_begin;
+wire [12:0] branch_offset = {
+	id_stage_i.instruction[31],
+	id_stage_i.instruction[7],
+	id_stage_i.instruction[30:25],
+	id_stage_i.instruction[11:8],
+	1'b0
+};
+wire signed [64-1:0] branch_offset_signed = {{51{branch_offset[12]}}, branch_offset};
+wire [64-1:0] branch_target = id_stage_i.fetch_entry_i.address + branch_offset_signed;
+
+reg [64-1:0] i1_branch_target_reg;
+reg i1_branch_target_valid;
+
+always @(posedge clk_i) begin
+	if (!rst_ni) begin
+		i1_branch_target_reg <= 1'b0;
+		i1_branch_target_valid <= 1'b0;
+	end else begin
+		i1_branch_target_reg <= is_i1_branch ? branch_target : i1_branch_target_reg;
+		i1_branch_target_valid <= is_i1_branch ? 1'b1 : i1_branch_target_valid;
+	end
+end
+
+wire i1_branch_to_trap = (i1_branch_target_reg == trap_vector_base_commit_pcgen) && i1_branch_target_valid;
+
+// =============================================================================
 // ## Performing location annotation
 // ============================================================================= 
 

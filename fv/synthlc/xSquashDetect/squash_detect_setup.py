@@ -70,10 +70,13 @@ def generate_header():
 
         # Write left_perf_locs wires
         for opcode in opcodes.keys():
-            # left_perf_locs_string = f"wire left_perf_locs_{opcode} = !in_perf_locs && prev_in_perf_locs && seen_i1_{opcode} && !seen_i1_committed && !i1_committed;\n"
             left_perf_locs_string = f"wire left_perf_locs_{opcode} = !in_perf_locs && prev_in_perf_locs ? seen_i1_{opcode} && !seen_i1_committed && !i1_committed : 1'b0;\n"
-            # left_perf_locs_string = f"wire left_perf_locs_{opcode} = seen_i1_{opcode} ? !in_perf_locs && prev_in_perf_locs && !seen_i1_committed && !i1_committed : 1'b0;\n"
             out_f.write(left_perf_locs_string)
+
+            icache_req_trap = f"tmp_icache_dreq_if_cache.vaddr == trap_vector_base_commit_pcgen && tmp_icache_dreq_if_cache.req"
+            not_branch_to_trap = ""
+            left_perf_locs_exception_string = f"wire left_perf_locs_exception_{opcode} = !in_perf_locs && prev_in_perf_locs && {icache_req_trap} ? seen_i1_{opcode} && !seen_i1_committed && !i1_committed && !i1_branch_to_trap : 1'b0;\n"
+            out_f.write(left_perf_locs_exception_string)
         
         out_f.write("\n")
 
@@ -215,12 +218,12 @@ def generate_spv_tcl():
         for opcode, opcode_portions in opcodes.items():
             # if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "SW" and opcode != "LW" and opcode != "CSRRWI" and opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCE" and opcode != "FENCEI":
             #     continue
-            # if opcode != "BNE" and opcode != "CSRRWI" and opcode != "LW":
+            # if opcode != "BNE":
             #     continue
             # if opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCEI" and opcode != "FENCE":
             # if opcode != "LW":
             #     continue
-            # if opcode != "AND" and opcode != "BNE":
+            # if opcode != "AND" and opcode != "BNE" and opcode != "CSRRWI" and opcode != "ECALL":
             #     continue
             if opcode == "NOP":
                 continue
@@ -229,6 +232,7 @@ def generate_spv_tcl():
             from_precond = f"i1_NOP"
 
             to_signal = f"left_perf_locs_{opcode}"
+            to_signal_exception = f"left_perf_locs_exception_{opcode}"
             to_precond = f"!left_perf_locs_{opcode} && in_perf_locs && $past(in_perf_locs)"
 
             # Not through these signals
@@ -242,8 +246,24 @@ def generate_spv_tcl():
             not_through += " issue_stage_i.i_issue_read_operands.stall"
             not_through += " no_st_pending_commit"
 
+            # Exception case
+            spv_check_exception = generate_spv_check(
+                name=f"{opcode}_EXCEPTION",
+                from_signal=from_signal,
+                to_signal=to_signal_exception,
+                from_precond=from_precond,
+                to_precond=to_precond,
+                not_through=not_through,
+                keep_driving_logic=True,
+                exclude_control_logic=False
+            )
+
+            out_f.write(spv_check_exception)
+            out_f.write("\n")
+
+            # General case
             spv_check = generate_spv_check(
-                name=f"{opcode}_SQUASHER",
+                name=f"{opcode}_GENERAL",
                 from_signal=from_signal,
                 to_signal=to_signal,
                 from_precond=from_precond,
