@@ -8,6 +8,19 @@
 `define INTRA_TRANSMITTER 
 
 // =============================================================================
+// Processor in operation
+// =============================================================================
+
+IN_OP_MODE: assume property (@(posedge clk_i) rst_ni == 1'd1);
+NOHALT: assume property (@(posedge clk_i) commit_stage_i.halt_i == 1'b0);
+
+// =============================================================================
+// icache-legal-setup
+// =============================================================================
+
+// TODO check if we need
+
+// =============================================================================
 // Frontend-legal-setup (since we bbox) and processor in operation
 // =============================================================================
 
@@ -16,47 +29,44 @@
 //BRANCH: assume property (@(posedge clk_i) 
 //      id_stage_i.fetch_entry_i.branch_predict.predict_address != pc0);
 
-NON_EXCEPTION_FRONTEND: assume property (@(posedge clk_i)
-  i_frontend.fetch_entry_o.ex.valid == 1'b0
-  // tag this fetched instruction is not exceptioned already at front-end
-  // (e.g., INSTR_PAGE_FAULT or INSTR_ACCESS_FAULT)
-);
-IF_ID_CONTRACT: assume property (@(posedge clk_i)
-  // yet ack then hold
-  (id_stage_i.fetch_entry_valid_i && !(fetch_ready_id_if)) |=>
-  (
-  ($past(id_stage_i.fetch_entry_valid_i) == id_stage_i.fetch_entry_valid_i) &&
-  ($past(id_stage_i.instruction) == id_stage_i.instruction) &&
-  ($past(id_stage_i.fetch_entry_i.address) == id_stage_i.fetch_entry_i.address)
-  )
-);
-
-IN_OP_MODE: assume property (@(posedge clk_i) rst_ni == 1'd1);
-NOHALT: assume property (@(posedge clk_i) commit_stage_i.halt_i == 1'b0);
+// NON_EXCEPTION_FRONTEND: assume property (@(posedge clk_i)
+//   i_frontend.fetch_entry_o.ex.valid == 1'b0
+//   // tag this fetched instruction is not exceptioned already at front-end
+//   // (e.g., INSTR_PAGE_FAULT or INSTR_ACCESS_FAULT)
+// );
+// IF_ID_CONTRACT: assume property (@(posedge clk_i)
+//   // yet ack then hold
+//   (id_stage_i.fetch_entry_valid_i && !(fetch_ready_id_if)) |=>
+//   (
+//   ($past(id_stage_i.fetch_entry_valid_i) == id_stage_i.fetch_entry_valid_i) &&
+//   ($past(id_stage_i.instruction) == id_stage_i.instruction) &&
+//   ($past(id_stage_i.fetch_entry_i.address) == id_stage_i.fetch_entry_i.address)
+//   )
+// );
 
 // Assume that previous fetched PC will be different from current fetched PC
-wire fetch_fire = id_stage_i.fetch_entry_valid_i && fetch_ready_id_if;
-wire [63:0] fetch_pc = id_stage_i.fetch_entry_i.address;
+// wire fetch_fire = id_stage_i.fetch_entry_valid_i && fetch_ready_id_if;
+// wire [63:0] fetch_pc = id_stage_i.fetch_entry_i.address;
 
-reg have_last_fire;
-reg [63:0] last_fire_pc;
+// reg have_last_fire;
+// reg [63:0] last_fire_pc;
 
-always_ff @(posedge clk_i) begin
-  if (!rst_ni) begin
-    have_last_fire <= 1'b0;
-    last_fire_pc <= '0;
-  end else if (fetch_fire) begin
-    have_last_fire <= 1'b1;
-    last_fire_pc <= fetch_pc;
-  end
-end
+// always_ff @(posedge clk_i) begin
+//   if (!rst_ni) begin
+//     have_last_fire <= 1'b0;
+//     last_fire_pc <= '0;
+//   end else if (fetch_fire) begin
+//     have_last_fire <= 1'b1;
+//     last_fire_pc <= fetch_pc;
+//   end
+// end
 
-PC_DIFF_LAST_INSTN: assume property (@(posedge clk_i) disable iff (!rst_ni)
-  fetch_fire && have_last_fire
-  |-> fetch_pc != last_fire_pc
-);
+// PC_DIFF_LAST_INSTN: assume property (@(posedge clk_i) disable iff (!rst_ni)
+//   fetch_fire && have_last_fire
+//   |-> fetch_pc != last_fire_pc
+// );
 
-PC_ALIGNED: assume property (@(posedge clk_i) id_stage_i.fetch_entry_i.address[1:0] == 2'b00);
+// PC_ALIGNED: assume property (@(posedge clk_i) id_stage_i.fetch_entry_i.address[1:0] == 2'b00);
 
 // =============================================================================
 // Set up instruction of interest 
@@ -74,23 +84,19 @@ wire [64-1:0] pc0;
 pc0_const: assume property (@(posedge clk_i) CONST(pc0));
 pc0_nozero: assume property (@(posedge clk_i) pc0 != '0);
 
+wire instn_fetched = (tmp_icache_dreq_cache_if.valid &&
+	                  tmp_icache_dreq_cache_if.vaddr == pc0);
 wire instn_begin = (id_stage_i.fetch_entry_valid_i && 
                     id_stage_i.fetch_entry_i.address == pc0);
 
-pc0_i0_assoc_1: assume property (@(posedge clk_i) 
-    id_stage_i.fetch_entry_i.address == pc0 |-> id_stage_i.instruction == i0);
+pc0_i0_assoc_1: assume property (@(posedge clk_i)
+    tmp_icache_dreq_cache_if.vaddr == pc0 |-> read_instr == i0);
 pc0_i0_assoc_2: assume property (@(posedge clk_i) 
-    id_stage_i.fetch_entry_i.address == pc0 |-> 
-    (id_stage_i.fetch_entry_valid_i == 1'b1 && 
-`ifndef SYSINSN
-    id_stage_i.decoded_instruction.ex.valid == 1'b0) 
-`else
-    id_stage_i.fetch_entry_i.ex.valid == 1'b0)
-`endif
-    // IF issuing a valid request, i.e. no exception raised so far at IF
-);
+    tmp_icache_dreq_cache_if.vaddr == pc0 |-> tmp_icache_dreq_cache_if.valid == 1'b1);
 
-VALID_INSTN: assume property (@(posedge clk_i) id_stage_i.fetch_entry_valid_i);
+FETCH_ONCE: assume property (@(posedge clk_i) instn_fetched |=>
+    always !(tmp_icache_dreq_cache_if.vaddr == pc0)
+);
 
 ISSUE_ONCE: assume property (@(posedge clk_i) instn_begin |=> 
         always !(id_stage_i.fetch_entry_i.address == pc0));
@@ -123,6 +129,7 @@ end
 // =============================================================================
 wire [32-1:0] i1;
 i1_const: assume property (@(posedge clk_i) CONST(i1));
+i1_nop: assume property (@(posedge clk_i) i1 == 32'h00000013);
 
 // =============================================================================
 // Set up pc value, instruction issue, and execution contexts
@@ -134,20 +141,18 @@ pc1_const: assume property (@(posedge clk_i) CONST(pc1));
 pc1_nozero: assume property (@(posedge clk_i) pc1 != '0);
 DIFF_PC: assume property (@(posedge clk_i) pc1 != pc0);
 
+wire i1_instn_fetched = (tmp_icache_dreq_cache_if.valid &&
+	                  tmp_icache_dreq_cache_if.vaddr == pc1);
 wire i1_instn_begin = (id_stage_i.fetch_entry_valid_i && 
                        id_stage_i.fetch_entry_i.address == pc1);
 
 pc1_i1_assoc_1: assume property (@(posedge clk_i) 
-    id_stage_i.fetch_entry_i.address == pc1 |-> id_stage_i.instruction == i1);
+    tmp_icache_dreq_cache_if.vaddr == pc1 |-> read_instr == i1);
 pc1_i1_assoc_2: assume property (@(posedge clk_i) 
-    id_stage_i.fetch_entry_i.address == pc1 |-> 
-    (id_stage_i.fetch_entry_valid_i == 1'b1 && 
-`ifndef SYSINSN
-    id_stage_i.decoded_instruction.ex.valid == 1'b0) 
-`else
-    id_stage_i.fetch_entry_i.ex.valid == 1'b0)
-`endif
-    // IF issuing a valid request, i.e. no exception raised so far at IF
+    tmp_icache_dreq_cache_if.vaddr == pc1 |-> tmp_icache_dreq_cache_if.valid == 1'b1);
+
+FETCH_ONCE_I1: assume property (@(posedge clk_i) i1_instn_fetched |=>
+    always !(tmp_icache_dreq_cache_if.vaddr == pc1)
 );
 
 ISSUE_ONCE_I1: assume property (@(posedge clk_i) i1_instn_begin |=> 
@@ -186,6 +191,15 @@ always @(posedge clk_i) begin
     end
 end
 
+reg i0_fetched_before;
+always @(posedge clk_i) begin
+    if (!rst_ni) begin
+        i0_fetched_before <= 1'b0;
+    end else if (instn_fetched) begin
+        i0_fetched_before <= 1'b1;
+    end
+end
+
 reg i1_issued_before;
 always @(posedge clk_i) begin
     if (!rst_ni) begin
@@ -195,8 +209,19 @@ always @(posedge clk_i) begin
     end
 end
 
+reg i1_fetched_before;
+always @(posedge clk_i) begin
+    if (!rst_ni) begin
+        i1_fetched_before <= 1'b0;
+    end else if (i1_instn_fetched) begin
+        i1_fetched_before <= 1'b1;
+    end
+end
+
 I1_ISSUE_HB_I0: assume property (@(posedge clk_i) instn_begin |-> i1_issued_before);
-I0_EVENTUAL_AFTER_I1: assume property (@(posedge clk_i) i1_instn_begin |-> s_eventually(instn_begin));
+I1_FETCH_HB_I0: assume property (@(posedge clk_i) i1_instn_begin |-> i0_fetched_before);
+I0_EVENTUAL_ISSUE_AFTER_I1: assume property (@(posedge clk_i) i1_instn_begin |-> s_eventually(instn_begin));
+I0_EVENTUAL_FETCH_AFTER_I1: assume property (@(posedge clk_i) i1_instn_begin |-> s_eventually(i0_fetched_before));
 
 // One cycle before
 // I1_ONE_CYCLE_BEFORE_I0: assume property (@(posedge clk_i) i1_instn_begin |-> ##1 instn_begin);

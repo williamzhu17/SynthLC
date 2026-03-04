@@ -28,7 +28,7 @@ if {$FPV == 1} {
     # Elaborates
     #elaborate -bbox_m {wt_cache_subsystem} -bbox_m {frontend}
     #puts "multiplier no-bbox"
-    elaborate -bbox_m {frontend}
+    elaborate
     #elaborate -bbox_m {frontend}
     #stopat -env {issue_stage_i.i_scoreboard.mem_n[0].sbe.is_compressed}  
     #elaborate

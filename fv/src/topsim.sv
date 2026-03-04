@@ -234,10 +234,55 @@ module ariane import ariane_pkg::*; #(
   icache_dreq_i_t   tmp_icache_dreq_if_cache;
   icache_dreq_o_t   tmp_icache_dreq_cache_if;
 
-  reg [64-1:0]      prev_vaddr[0:3];
-  reg               prev_req[0:4];
-  wire [32-1:0]      read_instr;
+  // 2-cycle icache stub (minimal for model-checking). Matches ariane.sv:240-273:
+  //   Original: prev_req[0]=req&&!kill_s1; prev_req[1]=prev_req[0]&&!kill_s2; valid=prev_req[4].
+  //   Stub:     pending = request in flight; valid = pending&&!kill_s2 (kill_s2 in response cycle).
+  logic              icache_pending;
+  logic [riscv::VLEN-1:0] icache_pending_vaddr;
+  wire [32-1:0]     read_instr;
 
+  // ---------------------------------------------------------------------------
+  // read_instr: driven by the environment (testbench / model checker / memory).
+  // Assumptions for fake cache <-> frontend:
+  //   A1. When tmp_icache_dreq_cache_if.valid is 1, read_instr is the 32-bit
+  //       instruction word for the address in tmp_icache_dreq_cache_if.vaddr.
+  //       Frontend uses vaddr[1] to align (INSTR_PER_FETCH=2); word address is
+  //       vaddr[VLEN-1:2], so read_instr = memory[{vaddr[VLEN-1:2], 2'b0}].
+  //   A2. No fetch exceptions from this stub: ex is always 0 (no page/access fault).
+  //   A3. Stub is always ready when out of reset; no back-pressure.
+  //   A4. At most one response in flight (2-cycle stub, one pending slot).
+  // ---------------------------------------------------------------------------
+
+  assign tmp_icache_dreq_cache_if.ex    = '0;
+  assign tmp_icache_dreq_cache_if.data  = read_instr;
+  assign tmp_icache_dreq_cache_if.vaddr = icache_pending_vaddr;
+
+  always_comb begin
+    if (!rst_ni) begin
+      tmp_icache_dreq_cache_if.ready = 1'b0;
+      tmp_icache_dreq_cache_if.valid = 1'b0;
+    end else begin
+      tmp_icache_dreq_cache_if.ready = 1'b1;
+      tmp_icache_dreq_cache_if.valid = icache_pending && !tmp_icache_dreq_if_cache.kill_s2;
+    end
+  end
+
+  always_ff @(posedge clk_i) begin
+    if (!rst_ni) begin
+      icache_pending       <= 1'b0;
+      icache_pending_vaddr <= '0;
+    end else begin
+      // 2-cycle path: capture req (and !kill_s1) → next cycle respond if !kill_s2
+      if (tmp_icache_dreq_if_cache.req && !tmp_icache_dreq_if_cache.kill_s1) begin
+        icache_pending       <= 1'b1;
+        icache_pending_vaddr <= tmp_icache_dreq_if_cache.vaddr;
+      end else if (icache_pending && tmp_icache_dreq_if_cache.kill_s2) begin
+        icache_pending       <= 1'b0;  // squash, do not respond
+      end else if (icache_pending) begin
+        icache_pending       <= 1'b0;  // responded (valid=1), clear
+      end
+    end
+  end
 
   amo_req_t                 amo_req;
   amo_resp_t                amo_resp;

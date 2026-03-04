@@ -220,6 +220,8 @@ def generate_spv_tcl():
             # if opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCEI" and opcode != "FENCE":
             # if opcode != "LW":
             #     continue
+            # if opcode != "AND" and opcode != "BNE":
+            #     continue
             if opcode == "NOP":
                 continue
 
@@ -228,8 +230,6 @@ def generate_spv_tcl():
 
             to_signal = f"left_perf_locs_{opcode}"
             to_precond = f"!left_perf_locs_{opcode} && in_perf_locs && $past(in_perf_locs)"
-            # to_signal = "in_perf_locs"
-            # to_precond = None
 
             # Not through these signals
             not_through = "issue_stage_i.i_issue_read_operands.rs1_i issue_stage_i.i_issue_read_operands.rs1_valid_i issue_stage_i.i_issue_read_operands.forward_rs1 issue_stage_i.i_issue_read_operands.rs2_i issue_stage_i.i_issue_read_operands.rs2_valid_i issue_stage_i.i_issue_read_operands.forward_rs2 issue_stage_i.i_issue_read_operands.rs3_i issue_stage_i.i_issue_read_operands.rs3_valid_i issue_stage_i.i_issue_read_operands.forward_rs3 issue_stage_i.i_issue_read_operands.rd_clobber_gpr_i issue_stage_i.i_issue_read_operands.rd_clobber_fpr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.waddr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.wdata_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.we_i"
@@ -241,13 +241,6 @@ def generate_spv_tcl():
             # TODO not sure about these
             not_through += " issue_stage_i.i_issue_read_operands.stall"
             not_through += " no_st_pending_commit"
-
-            # not_through += f" seen_i1_{opcode}"
-            # not_through += " seen_i1_committed"
-            # not_through += " i1_instn_begin"
-
-            # TODO: idea about not tainting the destination register
-            # not_through = None
 
             spv_check = generate_spv_check(
                 name=f"{opcode}_SQUASHER",
