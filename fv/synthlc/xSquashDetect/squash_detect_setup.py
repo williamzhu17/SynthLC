@@ -70,7 +70,9 @@ def generate_header():
 
         # Write left_perf_locs wires
         for opcode in opcodes.keys():
-            left_perf_locs_string = f"wire left_perf_locs_{opcode} = !in_perf_locs && prev_in_perf_locs && seen_i1_{opcode} && !seen_i1_committed && !i1_committed;\n"
+            # left_perf_locs_string = f"wire left_perf_locs_{opcode} = !in_perf_locs && prev_in_perf_locs && seen_i1_{opcode} && !seen_i1_committed && !i1_committed;\n"
+            left_perf_locs_string = f"wire left_perf_locs_{opcode} = !in_perf_locs && prev_in_perf_locs ? seen_i1_{opcode} && !seen_i1_committed && !i1_committed : 1'b0;\n"
+            # left_perf_locs_string = f"wire left_perf_locs_{opcode} = seen_i1_{opcode} ? !in_perf_locs && prev_in_perf_locs && !seen_i1_committed && !i1_committed : 1'b0;\n"
             out_f.write(left_perf_locs_string)
         
         out_f.write("\n")
@@ -211,9 +213,13 @@ def generate_spv_tcl():
 
     with open(out, "w") as out_f:
         for opcode, opcode_portions in opcodes.items():
-            if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "SW" and opcode != "LW" and opcode != "CSRRWI" and opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCE" and opcode != "FENCEI":
-                continue
+            # if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "SW" and opcode != "LW" and opcode != "CSRRWI" and opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCE" and opcode != "FENCEI":
+            #     continue
+            # if opcode != "BNE" and opcode != "CSRRWI" and opcode != "LW":
+            #     continue
             # if opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCEI" and opcode != "FENCE":
+            # if opcode != "LW":
+            #     continue
             if opcode == "NOP":
                 continue
 
@@ -222,13 +228,23 @@ def generate_spv_tcl():
 
             to_signal = f"left_perf_locs_{opcode}"
             to_precond = f"!left_perf_locs_{opcode} && in_perf_locs && $past(in_perf_locs)"
+            # to_signal = "in_perf_locs"
+            # to_precond = None
 
             # Not through these signals
             not_through = "issue_stage_i.i_issue_read_operands.rs1_i issue_stage_i.i_issue_read_operands.rs1_valid_i issue_stage_i.i_issue_read_operands.forward_rs1 issue_stage_i.i_issue_read_operands.rs2_i issue_stage_i.i_issue_read_operands.rs2_valid_i issue_stage_i.i_issue_read_operands.forward_rs2 issue_stage_i.i_issue_read_operands.rs3_i issue_stage_i.i_issue_read_operands.rs3_valid_i issue_stage_i.i_issue_read_operands.forward_rs3 issue_stage_i.i_issue_read_operands.rd_clobber_gpr_i issue_stage_i.i_issue_read_operands.rd_clobber_fpr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.waddr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.wdata_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.we_i"
 
+            not_through += " issue_stage_i.i_issue_read_operands.we_fpr_i issue_stage_i.i_issue_read_operands.we_gpr_i"
+            not_through += " issue_stage_i.i_issue_read_operands.waddr_i"
+            not_through += " issue_stage_i.i_issue_read_operands.issue_instr_i.rd"  # Don't care about destination, as we only care if previous state can induce behaviors
+
             # TODO not sure about these
             not_through += " issue_stage_i.i_issue_read_operands.stall"
             not_through += " no_st_pending_commit"
+
+            # not_through += f" seen_i1_{opcode}"
+            # not_through += " seen_i1_committed"
+            # not_through += " i1_instn_begin"
 
             # TODO: idea about not tainting the destination register
             # not_through = None
