@@ -73,12 +73,15 @@ def generate_header():
             left_perf_locs_string = f"wire left_perf_locs_{opcode} = !in_perf_locs && prev_in_perf_locs ? seen_i1_{opcode} && !seen_i1_committed && !i1_committed : 1'b0;\n"
             out_f.write(left_perf_locs_string)
 
+            # TODO: need to figure out how to handle JALR
+            no_jump_to_trap = "!i1_branch_to_trap && !i1_jal_to_trap"
+
             icache_req_trap = f"tmp_icache_dreq_if_cache.vaddr == trap_vector_base_commit_pcgen && tmp_icache_dreq_if_cache.req"
-            left_perf_locs_exception_string = f"wire left_perf_locs_exception_{opcode} = !in_perf_locs && prev_in_perf_locs && {icache_req_trap} ? seen_i1_{opcode} && !seen_i1_committed && !i1_committed && !i1_branch_to_trap : 1'b0;\n"
+            left_perf_locs_exception_string = f"wire left_perf_locs_exception_{opcode} = !in_perf_locs && prev_in_perf_locs && {icache_req_trap} ? seen_i1_{opcode} && !seen_i1_committed && !i1_committed && {no_jump_to_trap} : 1'b0;\n"
             out_f.write(left_perf_locs_exception_string)
 
             no_icache_req_trap = f"tmp_icache_dreq_if_cache.vaddr != trap_vector_base_commit_pcgen && tmp_icache_dreq_if_cache.req"
-            left_perf_locs_speculation_string = f"wire left_perf_locs_speculation_{opcode} = !in_perf_locs && prev_in_perf_locs && {no_icache_req_trap} ? seen_i1_{opcode} && !seen_i1_committed && !i1_committed && !i1_branch_to_trap : 1'b0;\n"
+            left_perf_locs_speculation_string = f"wire left_perf_locs_speculation_{opcode} = !in_perf_locs && prev_in_perf_locs && {no_icache_req_trap} ? seen_i1_{opcode} && !seen_i1_committed && !i1_committed && {no_jump_to_trap} : 1'b0;\n"
             out_f.write(left_perf_locs_speculation_string)
         
         out_f.write("\n")
@@ -219,9 +222,9 @@ def generate_spv_tcl():
 
     with open(out, "w") as out_f:
         for opcode, opcode_portions in opcodes.items():
-            # if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "SW" and opcode != "LW" and opcode != "CSRRWI" and opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCE" and opcode != "FENCEI":
+            # if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "LW" and opcode != "CSRRWI" and opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCE":
             #     continue
-            # if opcode != "BNE":
+            # if opcode != "BNE" and opcode != "JALR" and opcode != "JAL":
             #     continue
             # if opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCEI" and opcode != "FENCE":
             # if opcode != "LW":
@@ -293,6 +296,7 @@ def generate_spv_tcl():
                 exclude_control_logic=False
             )
 
+            # TODO: uncomment this
             out_f.write(spv_check)
             out_f.write("\n")
         

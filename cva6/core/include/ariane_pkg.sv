@@ -279,7 +279,7 @@ package ariane_pkg;
     // ---------------
 
     // leave as is (fails with >8 entries and wider fetch width)
-    localparam int unsigned FETCH_FIFO_DEPTH  = 2;
+    localparam int unsigned FETCH_FIFO_DEPTH  = 4;
     localparam int unsigned FETCH_WIDTH       = 32;
     // maximum instructions we can fetch on one request (we support compressed instructions)
     localparam int unsigned INSTR_PER_FETCH = FETCH_WIDTH / 16;

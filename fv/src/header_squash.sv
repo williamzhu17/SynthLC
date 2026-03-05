@@ -222,12 +222,13 @@ I0_EVENTUAL_ISSUE_AFTER_I1: assume property (@(posedge clk_i) i1_instn_begin |->
 I0_EVENTUAL_FETCH_AFTER_I1: assume property (@(posedge clk_i) i1_instn_begin |-> s_eventually(i0_fetched_before));
 
 // One cycle before
-// I1_ONE_CYCLE_BEFORE_I0: assume property (@(posedge clk_i) i1_instn_begin |-> ##1 instn_begin);
+// I1_N_CYCLES_BEFORE_I0: assume property (@(posedge clk_i) i1_instn_begin |-> ##1 instn_begin);
 
 // =============================================================================
-// ## Branch cannot jump to trap
+// ## No jump to trap
 // ============================================================================= 
 
+// Branch instructions
 wire is_i1_branch = id_stage_i.instruction[6:0] == 7'b1100011 && i1_instn_begin;
 wire [12:0] branch_offset = {
 	id_stage_i.instruction[31],
@@ -253,6 +254,30 @@ always @(posedge clk_i) begin
 end
 
 wire i1_branch_to_trap = (i1_branch_target_reg == trap_vector_base_commit_pcgen) && i1_branch_target_valid;
+
+// JAL instruction
+wire is_i1_jal = id_stage_i.instruction[6:0] == 7'b1101111 && i1_instn_begin;
+wire [12:0] jal_offset = id_stage_i.instruction[31:20];
+wire signed [64-1:0] jal_offset_signed = {{51{jal_offset[12]}}, jal_offset};
+wire [64-1:0] jal_target = id_stage_i.fetch_entry_i.address + jal_offset_signed;
+
+reg [64-1:0] i1_jal_target_reg;
+reg i1_jal_target_valid;
+
+always @(posedge clk_i) begin
+	if (!rst_ni) begin
+		i1_jal_target_reg <= 1'b0;
+		i1_jal_target_valid <= 1'b0;
+	end else begin
+		i1_jal_target_reg <= is_i1_jal ? jal_target : i1_jal_target_reg;
+		i1_jal_target_valid <= is_i1_jal ? 1'b1 : i1_jal_target_valid;
+	end
+end
+
+wire i1_jal_to_trap = (i1_jal_target_reg == trap_vector_base_commit_pcgen) && i1_jal_target_valid;
+
+// JALR instruction
+// TODO: Need a way to handle this
 
 // =============================================================================
 // ## Performing location annotation
