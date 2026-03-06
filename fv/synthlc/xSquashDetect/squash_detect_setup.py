@@ -222,15 +222,9 @@ def generate_spv_tcl():
 
     with open(out, "w") as out_f:
         for opcode, opcode_portions in opcodes.items():
-            # if opcode != "AND" and opcode != "BNE" and opcode != "DIV" and opcode != "LW" and opcode != "CSRRWI" and opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCE":
+            # if opcode != "BEQ" and opcode != "BGEU" and opcode != "BGE" and opcode != "BLTU" and opcode != "BLT" and opcode != "BNE" and opcode != "CSRRCI" and opcode != "CSRRC" and opcode != "CSRRSI" and opcode != "CSRRS" and opcode != "CSRRWI" and opcode != "CSRRW" and opcode != "EBREAK" and opcode != "ECALL" and opcode != "JALR":
             #     continue
-            # if opcode != "BNE" and opcode != "JALR" and opcode != "JAL":
-            #     continue
-            # if opcode != "ECALL" and opcode != "EBREAK" and opcode != "FENCEI" and opcode != "FENCE":
-            # if opcode != "LW":
-            #     continue
-            # if opcode != "AND" and opcode != "BNE" and opcode != "CSRRWI" and opcode != "ECALL":
-            #     continue
+
             if opcode == "NOP":
                 continue
 

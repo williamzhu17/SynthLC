@@ -221,8 +221,27 @@ I1_FETCH_HB_I0: assume property (@(posedge clk_i) i1_instn_begin |-> i0_fetched_
 I0_EVENTUAL_ISSUE_AFTER_I1: assume property (@(posedge clk_i) i1_instn_begin |-> s_eventually(instn_begin));
 I0_EVENTUAL_FETCH_AFTER_I1: assume property (@(posedge clk_i) i1_instn_begin |-> s_eventually(i0_fetched_before));
 
-// One cycle before
-// I1_N_CYCLES_BEFORE_I0: assume property (@(posedge clk_i) i1_instn_begin |-> ##1 instn_begin);
+// N instructions between i1 and i0
+reg [7:0] instn_count_after_i1;
+reg counting;
+
+always @(posedge clk_i) begin
+	if (!rst_ni) begin
+		instn_count_after_i1 <= '0;
+		counting <= 1'b0;
+	end else if (i1_instn_begin) begin
+		instn_count_after_i1 <= '0;
+		counting <= 1'b1;
+	end else if (counting && id_stage_i.fetch_entry_valid_i && fetch_ready_id_if) begin
+		instn_count_after_i1 <= instn_count_after_i1 + 1;
+		counting <= counting;
+	end else begin
+        instn_count_after_i1 <= instn_count_after_i1;
+        counting <= counting;
+	end
+end
+
+I1_N_INSTNS_BEFORE_I0: assume property (@(posedge clk_i) instn_begin |-> instn_count_after_i1 == 2);
 
 // =============================================================================
 // ## No jump to trap
