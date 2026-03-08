@@ -250,7 +250,7 @@ def generate_spv_tcl():
             not_through += " issue_stage_i.i_issue_read_operands.stall"
             not_through += " no_st_pending_commit"
 
-            # not_through += " tmp_icache_dreq_if_cache"
+            not_through += " tmp_icache_dreq_if_cache"
 
             # Exception case
             # Need to account for timing behaviors and how it fetch addr == trap addr can be potentially delayed
