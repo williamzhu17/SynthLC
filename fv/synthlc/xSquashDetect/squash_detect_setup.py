@@ -225,6 +225,9 @@ def generate_spv_tcl():
             # if opcode != "BEQ" and opcode != "BGEU" and opcode != "BGE" and opcode != "BLTU" and opcode != "BLT" and opcode != "BNE" and opcode != "CSRRCI" and opcode != "CSRRC" and opcode != "CSRRSI" and opcode != "CSRRS" and opcode != "CSRRWI" and opcode != "CSRRW" and opcode != "EBREAK" and opcode != "ECALL" and opcode != "JALR":
             #     continue
 
+            # if opcode != "JAL" and opcode != "BEQ":
+            #     continue
+
             # if opcode != "BEQ" and opcode != "CSRRCI" and opcode != "EBREAK" and opcode != "AND" and opcode != "JAL" and opcode != "JALR":
             #     continue
 
@@ -250,7 +253,9 @@ def generate_spv_tcl():
             not_through += " issue_stage_i.i_issue_read_operands.stall"
             not_through += " no_st_pending_commit"
 
-            not_through += " tmp_icache_dreq_if_cache"
+            # Stop taint from going through the icache
+            not_through += " icache_pending_vaddr"
+            not_through += " tmp_icache_dreq_if_cache.kill_s2"
 
             # Exception case
             # Need to account for timing behaviors and how it fetch addr == trap addr can be potentially delayed

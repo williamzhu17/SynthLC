@@ -13,7 +13,8 @@
 
 IN_OP_MODE: assume property (@(posedge clk_i) rst_ni == 1'd1);
 NOHALT: assume property (@(posedge clk_i) commit_stage_i.halt_i == 1'b0);
-// NO_COMPRESSED_INSTNS: assume property (@(posedge clk_i) read_instr[1:0] == 2'b11);
+NO_COMPRESSED_INSTNS: assume property (@(posedge clk_i) read_instr[1:0] == 2'b11);
+ALIGNED_PC: assume property (@(posedge clk_i) tmp_icache_dreq_if_cache.vaddr[1:0] == 2'b00);
 
 // =============================================================================
 // icache-legal-setup
@@ -84,7 +85,6 @@ wire [64-1:0] pc0;
 
 pc0_const: assume property (@(posedge clk_i) CONST(pc0));
 pc0_nozero: assume property (@(posedge clk_i) pc0 != '0);
-pc0_aligned: assume property (@(posedge clk_i) pc0[1:0] == 2'b00);
 
 wire instn_fetched = (tmp_icache_dreq_cache_if.valid &&
 	                  tmp_icache_dreq_cache_if.vaddr == pc0);
@@ -144,7 +144,6 @@ wire [64-1:0] pc1;
 
 pc1_const: assume property (@(posedge clk_i) CONST(pc1));
 pc1_nozero: assume property (@(posedge clk_i) pc1 != '0);
-pc1_aligned: assume property (@(posedge clk_i) pc1[1:0] == 2'b00);
 DIFF_PC: assume property (@(posedge clk_i) pc1 != pc0);
 
 wire i1_instn_fetched = (tmp_icache_dreq_cache_if.valid &&
