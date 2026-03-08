@@ -7,12 +7,12 @@ from util import *
 def i1_signal_detect_string(opcode, opcode_requirement_list):
     """
     Generates signals for header. For example:
-    wire i1_nop = id_stage_i.instruction == 32'h00000013 && i1_instn_begin;
+    wire i1_NOP = read_instr == 32'h00000013 && i1_instn_fetched;
     """
 
-    replaced_requirements = " && ".join([req.replace("i0", "id_stage_i.instruction") for req in opcode_requirement_list])
+    replaced_requirements = " && ".join([req.replace("i0", "read_instr") for req in opcode_requirement_list])
 
-    signal_string = f"wire i1_{opcode} = {replaced_requirements} && i1_instn_begin;"
+    signal_string = f"wire i1_{opcode} = {replaced_requirements} && i1_instn_fetched;"
     seen_string = f"reg seen_i1_{opcode};"
 
     return f"{signal_string}\n{seen_string}\n"
@@ -70,18 +70,20 @@ def generate_header():
 
         # Write left_perf_locs wires
         for opcode in opcodes.keys():
-            left_perf_locs_string = f"wire left_perf_locs_{opcode} = !in_perf_locs && prev_in_perf_locs ? seen_i1_{opcode} && !seen_i1_committed && !i1_committed : 1'b0;\n"
+            no_i1_more_than_once = "!i1_fetched_more_than_once && !(i1_instn_fetched && seen_i1_fetched)"
+
+            left_perf_locs_string = f"wire left_perf_locs_{opcode} = !in_perf_locs && prev_in_perf_locs ? i0_fetched_before && seen_i1_{opcode} && !seen_i1_committed && !i1_committed && {no_i1_more_than_once} : 1'b0;\n"
             out_f.write(left_perf_locs_string)
 
             # TODO: need to figure out how to handle JALR
             no_jump_to_trap = "!i1_branch_to_trap && !i1_jal_to_trap"
 
             icache_req_trap = f"tmp_icache_dreq_if_cache.vaddr == trap_vector_base_commit_pcgen && tmp_icache_dreq_if_cache.req"
-            left_perf_locs_exception_string = f"wire left_perf_locs_exception_{opcode} = !in_perf_locs && prev_in_perf_locs && {icache_req_trap} ? seen_i1_{opcode} && !seen_i1_committed && !i1_committed && {no_jump_to_trap} : 1'b0;\n"
+            left_perf_locs_exception_string = f"wire left_perf_locs_exception_{opcode} = !in_perf_locs && prev_in_perf_locs && {icache_req_trap} ? i0_fetched_before && seen_i1_{opcode} && !seen_i1_committed && !i1_committed && {no_jump_to_trap} && {no_i1_more_than_once} : 1'b0;\n"
             out_f.write(left_perf_locs_exception_string)
 
             no_icache_req_trap = f"tmp_icache_dreq_if_cache.vaddr != trap_vector_base_commit_pcgen && tmp_icache_dreq_if_cache.req"
-            left_perf_locs_speculation_string = f"wire left_perf_locs_speculation_{opcode} = !in_perf_locs && prev_in_perf_locs && {no_icache_req_trap} ? seen_i1_{opcode} && !seen_i1_committed && !i1_committed && {no_jump_to_trap} : 1'b0;\n"
+            left_perf_locs_speculation_string = f"wire left_perf_locs_speculation_{opcode} = !in_perf_locs && prev_in_perf_locs && {no_icache_req_trap} ? i0_fetched_before && seen_i1_{opcode} && !seen_i1_committed && !i1_committed && {no_jump_to_trap} && {no_i1_more_than_once} : 1'b0;\n"
             out_f.write(left_perf_locs_speculation_string)
         
         out_f.write("\n")
@@ -214,27 +216,28 @@ def generate_spv_tcl():
     """
 
     template = "./squash_detect_template.tcl"
-    instruction_signal_prefix = "id_stage_i.instruction"
     out = "./squash_detect.tcl"
 
     opcodes = obtain_opcodes()
-    instruction_prefix = "id_stage_i.instruction"
 
     with open(out, "w") as out_f:
         for opcode, opcode_portions in opcodes.items():
             # if opcode != "BEQ" and opcode != "BGEU" and opcode != "BGE" and opcode != "BLTU" and opcode != "BLT" and opcode != "BNE" and opcode != "CSRRCI" and opcode != "CSRRC" and opcode != "CSRRSI" and opcode != "CSRRS" and opcode != "CSRRWI" and opcode != "CSRRW" and opcode != "EBREAK" and opcode != "ECALL" and opcode != "JALR":
             #     continue
 
+            # if opcode != "BEQ" and opcode != "CSRRCI" and opcode != "EBREAK" and opcode != "AND" and opcode != "JAL" and opcode != "JALR":
+            #     continue
+
             if opcode == "NOP":
                 continue
 
-            from_signal = "id_stage_i.instruction"
+            from_signal = "read_instr"
             from_precond = f"i1_NOP"
 
             to_signal = f"left_perf_locs_{opcode}"
             to_signal_exception = f"left_perf_locs_exception_{opcode}"
             to_signal_speculation = f"left_perf_locs_speculation_{opcode}"
-            to_precond = f"!left_perf_locs_{opcode} && in_perf_locs && $past(in_perf_locs)"
+            to_precond = f"!left_perf_locs_{opcode} && in_perf_locs && $past(in_perf_locs) && i0_fetched_before"
 
             # Not through these signals
             not_through = "issue_stage_i.i_issue_read_operands.rs1_i issue_stage_i.i_issue_read_operands.rs1_valid_i issue_stage_i.i_issue_read_operands.forward_rs1 issue_stage_i.i_issue_read_operands.rs2_i issue_stage_i.i_issue_read_operands.rs2_valid_i issue_stage_i.i_issue_read_operands.forward_rs2 issue_stage_i.i_issue_read_operands.rs3_i issue_stage_i.i_issue_read_operands.rs3_valid_i issue_stage_i.i_issue_read_operands.forward_rs3 issue_stage_i.i_issue_read_operands.rd_clobber_gpr_i issue_stage_i.i_issue_read_operands.rd_clobber_fpr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.waddr_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.wdata_i issue_stage_i.i_issue_read_operands.i_ariane_regfile.we_i"
@@ -246,6 +249,8 @@ def generate_spv_tcl():
             # TODO not sure about these
             not_through += " issue_stage_i.i_issue_read_operands.stall"
             not_through += " no_st_pending_commit"
+
+            # not_through += " tmp_icache_dreq_if_cache"
 
             # Exception case
             # Need to account for timing behaviors and how it fetch addr == trap addr can be potentially delayed
@@ -260,8 +265,8 @@ def generate_spv_tcl():
                 exclude_control_logic=False
             )
 
-            out_f.write(spv_check_exception)
-            out_f.write("\n")
+            # out_f.write(spv_check_exception)
+            # out_f.write("\n")
 
             # Speculation case
             spv_check_speculation = generate_spv_check(
@@ -275,8 +280,8 @@ def generate_spv_tcl():
                 exclude_control_logic=False
             )
 
-            out_f.write(spv_check_speculation)
-            out_f.write("\n")
+            # out_f.write(spv_check_speculation)
+            # out_f.write("\n")
 
             # General case
             spv_check = generate_spv_check(
