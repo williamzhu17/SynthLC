@@ -192,8 +192,10 @@ module frontend import ariane_pkg::*; #(
             // make sure to only alter the RAS if we actually consumed the instruction
             ras_pop = ras_predict.valid & instr_queue_consumed[i];
             ras_push = 1'b0;
-            predict_address = ras_predict.ra;
-            cf_type[i] = ariane_pkg::Return;
+            if (ras_predict.valid) begin // bug fix for when using ras when empty pollutes PC register
+              predict_address = ras_predict.ra;
+              cf_type[i] = ariane_pkg::Return;
+            end
           end
           // branch prediction
           4'b1000: begin
