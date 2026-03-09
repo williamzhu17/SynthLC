@@ -78,11 +78,11 @@ def generate_header():
             # TODO: need to figure out how to handle JALR
             no_jump_to_trap = "!i1_branch_to_trap && !i1_jal_to_trap"
 
-            icache_req_trap = f"tmp_icache_dreq_if_cache.vaddr == trap_vector_base_commit_pcgen && tmp_icache_dreq_if_cache.req"
+            icache_req_trap = f"tmp_icache_dreq_if_cache.vaddr == trap_vector_base_commit_pcgen && tmp_icache_dreq_if_cache.req && !tmp_icache_dreq_if_cache.kill_s2"
             left_perf_locs_exception_string = f"wire left_perf_locs_exception_{opcode} = !in_perf_locs && prev_in_perf_locs && {icache_req_trap} ? i0_fetched_before && seen_i1_{opcode} && !seen_i1_committed && !i1_committed && {no_jump_to_trap} && {no_i1_more_than_once} : 1'b0;\n"
             out_f.write(left_perf_locs_exception_string)
 
-            no_icache_req_trap = f"tmp_icache_dreq_if_cache.vaddr != trap_vector_base_commit_pcgen && tmp_icache_dreq_if_cache.req"
+            no_icache_req_trap = f"tmp_icache_dreq_if_cache.vaddr != trap_vector_base_commit_pcgen && tmp_icache_dreq_if_cache.req && !tmp_icache_dreq_if_cache.kill_s2"
             left_perf_locs_speculation_string = f"wire left_perf_locs_speculation_{opcode} = !in_perf_locs && prev_in_perf_locs && {no_icache_req_trap} ? i0_fetched_before && seen_i1_{opcode} && !seen_i1_committed && !i1_committed && {no_jump_to_trap} && {no_i1_more_than_once} : 1'b0;\n"
             out_f.write(left_perf_locs_speculation_string)
         
@@ -225,7 +225,7 @@ def generate_spv_tcl():
             # if opcode != "BEQ" and opcode != "BGEU" and opcode != "BGE" and opcode != "BLTU" and opcode != "BLT" and opcode != "BNE" and opcode != "CSRRCI" and opcode != "CSRRC" and opcode != "CSRRSI" and opcode != "CSRRS" and opcode != "CSRRWI" and opcode != "CSRRW" and opcode != "EBREAK" and opcode != "ECALL" and opcode != "JALR":
             #     continue
 
-            # if opcode != "JAL" and opcode != "BEQ":
+            # if opcode != "JAL" and opcode != "BEQ" and opcode != "ECALL":
             #     continue
 
             # if opcode != "BEQ" and opcode != "CSRRCI" and opcode != "EBREAK" and opcode != "AND" and opcode != "JAL" and opcode != "JALR":
@@ -255,7 +255,6 @@ def generate_spv_tcl():
 
             # Stop taint from going through the icache
             not_through += " icache_pending_vaddr"
-            not_through += " tmp_icache_dreq_if_cache.kill_s2"
 
             # Exception case
             # Need to account for timing behaviors and how it fetch addr == trap addr can be potentially delayed
@@ -270,8 +269,8 @@ def generate_spv_tcl():
                 exclude_control_logic=False
             )
 
-            # out_f.write(spv_check_exception)
-            # out_f.write("\n")
+            out_f.write(spv_check_exception)
+            out_f.write("\n")
 
             # Speculation case
             spv_check_speculation = generate_spv_check(
@@ -285,8 +284,8 @@ def generate_spv_tcl():
                 exclude_control_logic=False
             )
 
-            # out_f.write(spv_check_speculation)
-            # out_f.write("\n")
+            out_f.write(spv_check_speculation)
+            out_f.write("\n")
 
             # General case
             spv_check = generate_spv_check(
@@ -301,8 +300,8 @@ def generate_spv_tcl():
             )
 
             # TODO: uncomment this
-            out_f.write(spv_check)
-            out_f.write("\n")
+            # out_f.write(spv_check)
+            # out_f.write("\n")
         
         # Read template content
         with open(template, "r") as f:

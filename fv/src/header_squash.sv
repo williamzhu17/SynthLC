@@ -16,6 +16,31 @@ NOHALT: assume property (@(posedge clk_i) commit_stage_i.halt_i == 1'b0);
 NO_COMPRESSED_INSTNS: assume property (@(posedge clk_i) read_instr[1:0] == 2'b11);
 ALIGNED_PC: assume property (@(posedge clk_i) tmp_icache_dreq_if_cache.vaddr[1:0] == 2'b00);
 
+READ_INSTR_CHANGE_VALID: assume property (@(posedge clk_i)
+    (tmp_icache_dreq_cache_if.valid && !$past(tmp_icache_dreq_cache_if.valid)) |-> 
+	(read_instr == $past(read_instr))
+);
+
+// reg prev_read_instr_valid;
+// reg prev_read_instr;
+// reg seen_read_instr_change_invalid;
+
+// wire read_instr_change_invalid = 
+//     !prev_read_instr_valid && tmp_icache_dreq_cache_if.valid &&
+// 	(read_instr != prev_read_instr);
+
+// always @(posedge clk_i) begin
+// 	if (!rst_ni) begin
+// 		prev_read_instr_valid <= 1'b0;
+// 		prev_read_instr <= '0;
+// 		seen_read_instr_change_invalid <= 1'b0;
+// 	end else begin
+//         prev_read_instr_valid <= tmp_icache_dreq_cache_if.valid;
+// 		prev_read_instr <= read_instr;
+// 		seen_read_instr_change_invalid <= read_instr_change_invalid ? 1'b1 : seen_read_instr_change_invalid;
+// 	end
+// end
+
 // =============================================================================
 // icache-legal-setup
 // =============================================================================
