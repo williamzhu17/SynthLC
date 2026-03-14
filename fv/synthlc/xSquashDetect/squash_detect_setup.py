@@ -47,8 +47,6 @@ def generate_header():
     header = "../header_squash.sv"
     out = "./squash_detect.sv"
 
-    reachable_pls = get_array("../xCoverAPerflocDiv/cover_individual.txt")
-
     with open(out, "w") as out_f:
         # Write header
         with open(header, "r") as f:
@@ -222,14 +220,10 @@ def generate_spv_tcl():
 
     with open(out, "w") as out_f:
         for opcode, opcode_portions in opcodes.items():
+            # Step 3: Uncomment and adjust based on which instructions cause flush behavior
             # if opcode != "BEQ" and opcode != "BGEU" and opcode != "BGE" and opcode != "BLTU" and opcode != "BLT" and opcode != "BNE" and opcode != "CSRRCI" and opcode != "CSRRC" and opcode != "CSRRSI" and opcode != "CSRRS" and opcode != "CSRRWI" and opcode != "CSRRW" and opcode != "EBREAK" and opcode != "ECALL" and opcode != "JALR":
             #     continue
-
-            # if opcode != "JAL" and opcode != "BEQ" and opcode != "ECALL":
-            #     continue
-
-            # if opcode != "BEQ" and opcode != "CSRRCI" and opcode != "EBREAK" and opcode != "AND" and opcode != "JAL" and opcode != "JALR":
-            #     continue
+            # Step 3: END
 
             if opcode == "NOP":
                 continue
@@ -269,8 +263,10 @@ def generate_spv_tcl():
                 exclude_control_logic=False
             )
 
-            out_f.write(spv_check_exception)
-            out_f.write("\n")
+            # Step 3: Uncomment
+            # out_f.write(spv_check_exception)
+            # out_f.write("\n")
+            # Step 3: END
 
             # Speculation case
             spv_check_speculation = generate_spv_check(
@@ -284,8 +280,10 @@ def generate_spv_tcl():
                 exclude_control_logic=False
             )
 
-            out_f.write(spv_check_speculation)
-            out_f.write("\n")
+            # Step 3: Uncomment
+            # out_f.write(spv_check_speculation)
+            # out_f.write("\n")
+            # Step 3: END
 
             # General case
             spv_check = generate_spv_check(
@@ -299,9 +297,10 @@ def generate_spv_tcl():
                 exclude_control_logic=False
             )
 
-            # TODO: uncomment this
-            # out_f.write(spv_check)
-            # out_f.write("\n")
+            # Step 3: Comment out
+            out_f.write(spv_check)
+            out_f.write("\n")
+            # Step 3: END
         
         # Read template content
         with open(template, "r") as f:

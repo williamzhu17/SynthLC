@@ -39,6 +39,8 @@ echo "==============================="
 
 ##### per instruction #####
 
+mkdir -p $INAME
+
 HEADERFILE=$(realpath ../src/header_squash.sv)
 
 cp $HEADERFILE $INAME/header_squash.sv
