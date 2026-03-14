@@ -2,7 +2,7 @@
 
 Step 1:
 
-To run SynthEC, first run steps 0, 1 below. When you run the scripts, you may have to `source` them rather than just using `./`. 
+To run SynthEC, first run steps 0, 1 in the artifact evaluation section below. When you run the scripts, you may have to `source` them rather than just using `./`. 
 
 Step 2:
 
