@@ -287,7 +287,7 @@ always @(posedge clk_i) begin
 	end
 end
 
-// I1_N_INSTNS_BEFORE_I0: assume property (@(posedge clk_i) instn_fetched |-> instn_count_after_i1 == 2);
+I1_N_INSTNS_BEFORE_I0: assume property (@(posedge clk_i) instn_fetched |-> instn_count_after_i1 == 2);
 
 // =============================================================================
 // ## No jump to trap

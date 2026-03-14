@@ -1,3 +1,9 @@
+# SynthEC
+
+To run SynthEC, first run steps 0, 1, and the DUV PL enumeration step in step 2. 
+
+WIP
+
 # Artifact Evaluation: 
 1. [00-installation](./00-installation.md)
 2. [01-setup](./01-setup.md)
